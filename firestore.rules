@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// RunSphere — Firestore Security Rules
+//
+// หลักการ:
+// - ผู้ใช้ "อ่าน" ได้เฉพาะข้อมูลของตัวเอง (users/{uid} และ subcollections)
+// - ห้าม client "เขียน" ทุกอย่าง: เหรียญ ค่าสถานะสัตว์เลี้ยง ภารกิจ และสถิติ
+//   ถูกเขียนโดย server (Next.js Route Handlers + Firebase Admin SDK) เท่านั้น
+//   ซึ่ง Admin SDK ไม่ถูกบังคับด้วย rules เหล่านี้
+// - collection อื่นทั้งหมดปิด
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+
+      match /{subcollection}/{docId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
