@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GAME_CONFIG } from "@/config/game";
 
 const items = [
   { href: "/play", label: "แผนที่", icon: "🗺️" },
   { href: "/pet", label: "สัตว์เลี้ยง", icon: "🐣" },
+  ...(GAME_CONFIG.leaderboard.enabled ? [{ href: "/leaderboard", label: "อันดับ", icon: "🏆" }] : []),
   { href: "/stats", label: "สถิติ", icon: "📈" },
   { href: "/settings", label: "ตั้งค่า", icon: "⚙️" },
-] as const;
+];
 
 export function BottomNav() {
   const pathname = usePathname();

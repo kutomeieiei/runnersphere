@@ -110,6 +110,31 @@ ok(r.body.cancelled === true, "mission cancelled", r.body);
 r = await call(a.token, "/api/stats");
 ok(r.status === 200 && r.body.recent.length === 2 && r.body.days.length === 28, "stats endpoint", r.body.recent);
 
+// leaderboard
+r = await call(a.token, "/api/leaderboard");
+ok(r.status === 200 && r.body.top.length === 1 && r.body.top[0].nickname === "ต้นกล้า" && r.body.top[0].spots === 1 && r.body.top[0].isMe, "leaderboard shows A with 1 spot", r.body);
+ok(r.body.me.rank === 1 && r.body.totalPlayers === 1, "A is rank 1", r.body.me);
+ok(!JSON.stringify(r.body).includes(a.uid), "leaderboard does not leak uids");
+r = await call(b.token, "/api/leaderboard");
+ok(r.body.top.length === 1 && r.body.top[0].isMe === false && r.body.me.rank === null, "B sees A, B (0 spots) not ranked", r.body);
+r = await call(a.token, "/api/profile", "POST", { nickname: "f u c k" });
+ok(r.status === 400 && r.body.error.code === "nickname_blocked", "rude nickname blocked", r.body);
+r = await call(a.token, "/api/profile", "POST", { nickname: "กล้าเดินเก่ง" });
+r = await call(b.token, "/api/leaderboard");
+ok(r.body.top[0]?.nickname === "กล้าเดินเก่ง", "nickname change updates leaderboard", r.body.top);
+r = await call(a.token, "/api/leaderboard/visibility", "POST", { visible: false });
+ok(r.status === 200 && r.body.visible === false, "A hides from leaderboard", r.body);
+r = await call(b.token, "/api/leaderboard");
+ok(r.body.top.length === 0 && r.body.totalPlayers === 0, "hidden player removed immediately", r.body);
+r = await call(a.token, "/api/leaderboard");
+ok(r.body.me.visible === false && r.body.me.spots === 1, "A still sees own weekly total while hidden", r.body.me);
+r = await call(a.token, "/api/leaderboard/visibility", "POST", { visible: "yes" });
+ok(r.status === 400, "visibility requires boolean", r);
+r = await call(a.token, "/api/leaderboard/visibility", "POST", { visible: true });
+r = await call(b.token, "/api/leaderboard");
+ok(r.body.top.length === 1 && r.body.top[0].spots === 1, "A back on leaderboard with weekly total", r.body);
+ok(await fetch(`${FS}/leaderboard/x/entries/y`, { headers: { authorization: `Bearer ${b.token}` } }).then((x) => x.status) === 403, "rules: leaderboard not readable directly");
+
 // feed
 r = await call(a.token, "/api/pet/feed", "POST", { foodId: "nope" });
 ok(r.status === 400, "unknown food rejected", r);
@@ -137,6 +162,8 @@ r = await call(a.token, "/api/me");
 ok(r.status === 401, "token unusable after deletion", r);
 const left = await fetch(`${FS}/users/${a.uid}/missions`, { headers: { authorization: "Bearer owner" } }).then((x) => x.json());
 ok(!left.documents || left.documents.length === 0, "user data removed", left);
+r = await call(b.token, "/api/leaderboard");
+ok(r.body.top.length === 0, "deleted account removed from leaderboard", r.body);
 
 console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
 process.exit(failures ? 1 : 0);

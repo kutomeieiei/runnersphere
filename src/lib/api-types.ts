@@ -30,6 +30,7 @@ export type ProfileSummary = {
   nickname: string;
   coins: number;
   totals: { spots: number; distanceM: number; coinsEarned: number };
+  leaderboardVisible: boolean;
 };
 
 export type MeResponse = {
@@ -83,4 +84,22 @@ export type StatsResponse = {
   days: DailyStats[];
   recent: MissionHistoryItem[];
   totals: ProfileSummary["totals"];
+};
+
+export type LeaderboardRow = {
+  rank: number;
+  nickname: string;
+  spots: number;
+  distanceM: number;
+  isMe: boolean;
+};
+
+export type LeaderboardResponse = {
+  /** วันจันทร์–อาทิตย์ของสัปดาห์นี้ (YYYY-MM-DD) */
+  weekStart: string;
+  weekEnd: string;
+  /** จำนวนผู้เล่นที่มีชื่อในกระดานสัปดาห์นี้ */
+  totalPlayers: number;
+  top: LeaderboardRow[];
+  me: { visible: boolean; rank: number | null; spots: number; distanceM: number };
 };

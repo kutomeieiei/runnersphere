@@ -7,7 +7,8 @@ rules_version = '2';
 // - ห้าม client "เขียน" ทุกอย่าง: เหรียญ ค่าสถานะสัตว์เลี้ยง ภารกิจ และสถิติ
 //   ถูกเขียนโดย server (Next.js Route Handlers + Firebase Admin SDK) เท่านั้น
 //   ซึ่ง Admin SDK ไม่ถูกบังคับด้วย rules เหล่านี้
-// - collection อื่นทั้งหมดปิด
+// - collection อื่นทั้งหมดปิด รวมถึง leaderboard/* (client ดูผ่าน /api/leaderboard
+//   ซึ่งส่งแค่ชื่อเล่นและตัวเลข ไม่ส่ง uid ของคนอื่น)
 service cloud.firestore {
   match /databases/{database}/documents {
 

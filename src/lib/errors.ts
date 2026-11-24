@@ -8,6 +8,8 @@ export type ApiErrorCode =
   | "profile_missing"
   | "invalid_input"
   | "invalid_nickname"
+  | "nickname_blocked"
+  | "leaderboard_disabled"
   | "outside_geofence"
   | "poor_accuracy"
   | "approximate_location"
@@ -32,6 +34,8 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   profile_missing: "ไม่พบข้อมูลผู้เล่น กำลังสร้างให้ใหม่…",
   invalid_input: "ข้อมูลที่ส่งมาไม่ถูกต้อง ลองใหม่อีกครั้ง",
   invalid_nickname: `ชื่อเล่นต้องมี 1–${GAME_CONFIG.profile.nicknameMaxLength} ตัวอักษร`,
+  nickname_blocked: "ชื่อเล่นนี้มีคำที่ไม่เหมาะสม ลองตั้งชื่ออื่นนะ",
+  leaderboard_disabled: "กระดานอันดับปิดอยู่",
   outside_geofence:
     "ตอนนี้คุณอยู่นอกพื้นที่โรงเรียน เกมนี้เล่นได้เฉพาะในโรงเรียนสาธิต มข. (มอดินแดง) เท่านั้น",
   poor_accuracy:

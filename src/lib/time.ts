@@ -53,3 +53,26 @@ export function isWithinPlayHours(
   // ช่วงข้ามเที่ยงคืน เช่น 20:00–06:00
   return now >= start || now < end;
 }
+
+const WEEKDAY_INDEX: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+
+/** ลำดับวันในสัปดาห์ (จันทร์ = 0 … อาทิตย์ = 6) ตามเขตเวลา */
+export function weekdayIndex(nowMs: number, timeZone: string = GAME_CONFIG.timeZone): number {
+  const name = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(new Date(nowMs));
+  return WEEKDAY_INDEX[name] ?? 0;
+}
+
+/** dateKey ของวันจันทร์ในสัปดาห์นี้ — ใช้เป็น id ของกระดานอันดับรายสัปดาห์ */
+export function weekStartKey(nowMs: number, timeZone: string = GAME_CONFIG.timeZone): string {
+  return dateKey(nowMs - weekdayIndex(nowMs, timeZone) * 86_400_000, timeZone);
+}
+
+/** dateKey ตั้งแต่วันจันทร์ถึงวันนี้ (เรียงเก่าไปใหม่) */
+export function weekDateKeysSoFar(nowMs: number, timeZone: string = GAME_CONFIG.timeZone): string[] {
+  return lastNDateKeys(nowMs, weekdayIndex(nowMs, timeZone) + 1, timeZone);
+}
+
+/** dateKey ของวันอาทิตย์ท้ายสัปดาห์ */
+export function weekEndKey(nowMs: number, timeZone: string = GAME_CONFIG.timeZone): string {
+  return dateKey(nowMs + (6 - weekdayIndex(nowMs, timeZone)) * 86_400_000, timeZone);
+}

@@ -5,6 +5,7 @@ import type {
   CheckResponse,
   DailyStats,
   FeedResponse,
+  LeaderboardResponse,
   MeResponse,
   MissionHistoryItem,
   PublicMission,
@@ -20,9 +21,17 @@ import {
   type PositionReading,
 } from "@/lib/arrival";
 import { pointInPolygon } from "@/lib/geo";
+import { containsBlockedWord, rankEntries, type LeaderboardEntry } from "@/lib/leaderboard";
 import { calcCoins, minTravelMs, selectSpot } from "@/lib/missions";
 import { applyDecay, feedPet, newPet, petMood, rewardPetForMission, type PetState } from "@/lib/pet";
-import { dateKey, isWithinPlayHours, lastNDateKeys } from "@/lib/time";
+import {
+  dateKey,
+  isWithinPlayHours,
+  lastNDateKeys,
+  weekDateKeysSoFar,
+  weekEndKey,
+  weekStartKey,
+} from "@/lib/time";
 import { adminAuth, db } from "./firebase-admin";
 import { ApiError } from "./http";
 
@@ -33,6 +42,8 @@ import { ApiError } from "./http";
  *   users/{uid}/pets/{petId}        PetDoc    (แยกเป็น collection เพื่อเพิ่มชนิด/หลายตัวได้ภายหลัง)
  *   users/{uid}/missions/{id}       MissionDoc (ผลลัพธ์ภารกิจ — ไม่เก็บเส้นทางเดิน)
  *   users/{uid}/daily/{YYYY-MM-DD}  DailyStats (สถิติรายวัน)
+ *   leaderboard/{วันจันทร์ YYYY-MM-DD}/entries/{uid}
+ *                                   EntryDoc  (กระดานอันดับรายสัปดาห์: ชื่อเล่น + ตัวเลขเท่านั้น)
  *
  * ทุกการเขียนทำผ่าน Admin SDK ฝั่ง server เท่านั้น (Security Rules ปิดการเขียนจาก client)
  * ------------------------------------------------------------------------- */
@@ -45,9 +56,15 @@ type UserDoc = {
   lastSpotId: string | null;
   lastMissionEndedAt: number | null;
   totals: { spots: number; distanceM: number; coinsEarned: number };
+  /** แสดงชื่อในกระดานอันดับหรือไม่ (ไม่มีค่า = ใช้ค่าเริ่มต้นใน config) */
+  leaderboardVisible?: boolean;
+  /** สัปดาห์ที่เคยมีชื่อในกระดาน — ใช้ลบข้อมูลเมื่อซ่อนชื่อหรือลบบัญชี */
+  leaderboardWeeks?: string[];
   createdAt: number;
   updatedAt: number;
 };
+
+type EntryDoc = { nickname: string; spots: number; distanceM: number; updatedAt: number };
 
 type PetDoc = PetState;
 
@@ -71,6 +88,12 @@ const userRef = (uid: string) => db().collection("users").doc(uid);
 const petRef = (uid: string, petId: string) => userRef(uid).collection("pets").doc(petId);
 const missionsCol = (uid: string) => userRef(uid).collection("missions");
 const dailyRef = (uid: string, key: string) => userRef(uid).collection("daily").doc(key);
+const entriesCol = (week: string) => db().collection("leaderboard").doc(week).collection("entries");
+const entryRef = (week: string, uid: string) => entriesCol(week).doc(uid);
+
+function isVisible(user: UserDoc): boolean {
+  return user.leaderboardVisible ?? GAME_CONFIG.leaderboard.defaultVisible;
+}
 
 function emptyDaily(date: string): DailyStats {
   return { date, spots: 0, distanceM: 0, coins: 0 };
@@ -144,6 +167,9 @@ export function normalizeNickname(raw: unknown): string {
   if (length < 1 || length > GAME_CONFIG.profile.nicknameMaxLength) {
     throw new ApiError(400, "invalid_nickname");
   }
+  if (containsBlockedWord(cleaned, GAME_CONFIG.profile.blockedWords)) {
+    throw new ApiError(400, "nickname_blocked");
+  }
   return cleaned;
 }
 
@@ -155,7 +181,11 @@ export async function upsertProfile(uid: string, nicknameRaw: unknown): Promise<
     const ref = userRef(uid);
     const snap = await tx.get(ref);
     if (snap.exists) {
+      // เปลี่ยนชื่อในกระดานสัปดาห์นี้ด้วย (ถ้ามีชื่ออยู่)
+      const eRef = entryRef(weekStartKey(now), uid);
+      const entry = await tx.get(eRef);
       tx.update(ref, { nickname, updatedAt: now });
+      if (entry.exists) tx.update(eRef, { nickname });
       return { created: false };
     }
     const species = PET_SPECIES[DEFAULT_SPECIES_ID];
@@ -167,6 +197,8 @@ export async function upsertProfile(uid: string, nicknameRaw: unknown): Promise<
       lastSpotId: null,
       lastMissionEndedAt: null,
       totals: { spots: 0, distanceM: 0, coinsEarned: 0 },
+      leaderboardVisible: GAME_CONFIG.leaderboard.defaultVisible,
+      leaderboardWeeks: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -205,7 +237,12 @@ export async function getMe(uid: string): Promise<MeResponse> {
   );
 
   return {
-    profile: { nickname: user.nickname, coins: user.coins, totals: user.totals },
+    profile: {
+      nickname: user.nickname,
+      coins: user.coins,
+      totals: user.totals,
+      leaderboardVisible: isVisible(user),
+    },
     pet: toPublicPet(user.activePetId, pet),
     activeMission,
     today: week[week.length - 1],
@@ -384,7 +421,25 @@ export async function checkMission(uid: string, reading: PositionReading): Promi
     });
     tx.set(dRef, newDaily);
     tx.set(pRef, petAfter);
+
+    // กระดานอันดับรายสัปดาห์ (เฉพาะผู้ที่เลือกแสดงชื่อ)
+    const onBoard = GAME_CONFIG.leaderboard.enabled && isVisible(user);
+    const week = weekStartKey(now);
+    if (onBoard) {
+      tx.set(
+        entryRef(week, uid),
+        {
+          nickname: user.nickname,
+          spots: FieldValue.increment(1),
+          distanceM: FieldValue.increment(distanceM),
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+    }
+
     tx.update(userRef(uid), {
+      ...(onBoard ? { leaderboardWeeks: FieldValue.arrayUnion(week) } : {}),
       coins: FieldValue.increment(coins),
       activeMissionId: null,
       lastSpotId: active.data.spotId,
@@ -464,7 +519,115 @@ export async function feed(uid: string, foodId: unknown): Promise<FeedResponse> 
 /* ------------------------------------------------------------------------- */
 
 export async function deleteAccount(uid: string): Promise<void> {
-  // ลบข้อมูลทั้งหมดใต้ users/{uid} (รวม subcollections) แล้วลบบัญชีใน Firebase Auth
+  // ลบชื่อในกระดานอันดับทุกสัปดาห์ แล้วลบข้อมูลทั้งหมดใต้ users/{uid} (รวม subcollections)
+  // แล้วลบบัญชีใน Firebase Auth
+  const snap = await userRef(uid).get();
+  const weeks = snap.exists ? ((snap.data() as UserDoc).leaderboardWeeks ?? []) : [];
+  weeks.push(weekStartKey(Date.now()));
+  const batch = db().batch();
+  for (const w of new Set(weeks)) batch.delete(entryRef(w, uid));
+  await batch.commit();
   await db().recursiveDelete(userRef(uid));
   await adminAuth().deleteUser(uid);
+}
+
+/* ------------------------------------------------------------------------- */
+/* กระดานอันดับรายสัปดาห์                                                       */
+/* ------------------------------------------------------------------------- */
+
+function requireLeaderboard() {
+  if (!GAME_CONFIG.leaderboard.enabled) throw new ApiError(404, "leaderboard_disabled");
+}
+
+async function weekTotals(uid: string, now: number) {
+  const snaps = await db().getAll(...weekDateKeysSoFar(now).map((k) => dailyRef(uid, k)));
+  return snaps.reduce(
+    (acc, s) => {
+      const d = s.exists ? (s.data() as DailyStats) : null;
+      return { spots: acc.spots + (d?.spots ?? 0), distanceM: acc.distanceM + (d?.distanceM ?? 0) };
+    },
+    { spots: 0, distanceM: 0 },
+  );
+}
+
+export async function getLeaderboard(uid: string): Promise<LeaderboardResponse> {
+  requireLeaderboard();
+  const now = Date.now();
+  const week = weekStartKey(now);
+  const userSnap = await userRef(uid).get();
+  if (!userSnap.exists) throw new ApiError(404, "profile_missing");
+  const user = userSnap.data() as UserDoc;
+  const col = entriesCol(week);
+  const topN = GAME_CONFIG.leaderboard.topN;
+
+  // ดึงเผื่อไว้มากกว่า topN เพื่อให้เรียงคะแนนเท่ากันได้ถูก (ใช้ index ช่องเดียว ไม่ต้องสร้าง composite index)
+  const [topSnap, totalAgg] = await Promise.all([
+    col.orderBy("spots", "desc").limit(topN * 2 + 10).get(),
+    col.where("spots", ">", 0).count().get(),
+  ]);
+  const entries: LeaderboardEntry[] = topSnap.docs.map((d) => ({ id: d.id, ...(d.data() as EntryDoc) }));
+  const top = rankEntries(entries)
+    .slice(0, topN)
+    .map((e) => ({
+      rank: e.rank,
+      nickname: e.nickname,
+      spots: e.spots,
+      distanceM: Math.round(e.distanceM),
+      isMe: e.id === uid,
+    }));
+
+  const visible = isVisible(user);
+  let me: LeaderboardResponse["me"];
+  if (visible) {
+    const mine = await entryRef(week, uid).get();
+    const data = mine.exists ? (mine.data() as EntryDoc) : null;
+    let rank: number | null = null;
+    if (data && data.spots > 0) {
+      const higher = await col.where("spots", ">", data.spots).count().get();
+      rank = higher.data().count + 1;
+    }
+    me = { visible, rank, spots: data?.spots ?? 0, distanceM: Math.round(data?.distanceM ?? 0) };
+  } else {
+    const totals = await weekTotals(uid, now);
+    me = { visible, rank: null, spots: totals.spots, distanceM: Math.round(totals.distanceM) };
+  }
+
+  return {
+    weekStart: week,
+    weekEnd: weekEndKey(now),
+    totalPlayers: totalAgg.data().count,
+    top,
+    me,
+  };
+}
+
+/** เปิด/ปิดการแสดงชื่อในกระดานอันดับ — ปิดแล้วลบชื่อออกจากทุกสัปดาห์ทันที */
+export async function setLeaderboardVisible(uid: string, visible: unknown): Promise<{ visible: boolean }> {
+  if (typeof visible !== "boolean") throw new ApiError(400, "invalid_input");
+  const now = Date.now();
+  const week = weekStartKey(now);
+  const totals = visible ? await weekTotals(uid, now) : null;
+
+  return db().runTransaction(async (tx) => {
+    const user = await readUser(tx, uid);
+    if (visible) {
+      if (totals && totals.spots > 0) {
+        tx.set(entryRef(week, uid), {
+          nickname: user.nickname,
+          spots: totals.spots,
+          distanceM: totals.distanceM,
+          updatedAt: now,
+        } satisfies EntryDoc);
+      }
+      tx.update(userRef(uid), {
+        leaderboardVisible: true,
+        ...(totals && totals.spots > 0 ? { leaderboardWeeks: FieldValue.arrayUnion(week) } : {}),
+        updatedAt: now,
+      });
+    } else {
+      for (const w of new Set([...(user.leaderboardWeeks ?? []), week])) tx.delete(entryRef(w, uid));
+      tx.update(userRef(uid), { leaderboardVisible: false, leaderboardWeeks: [], updatedAt: now });
+    }
+    return { visible };
+  });
 }

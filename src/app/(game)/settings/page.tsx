@@ -16,7 +16,8 @@ const CONFIRM_WORD = "ลบบัญชี";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
-  const { me, updateNickname } = useGame();
+  const { me, updateNickname, refresh } = useGame();
+  const [boardBusy, setBoardBusy] = useState(false);
   const [nickname, setNickname] = useState(me?.profile.nickname ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -37,6 +38,19 @@ export default function SettingsPage() {
       setError(err instanceof ApiClientError ? err.message : "บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function toggleLeaderboard(visible: boolean) {
+    setBoardBusy(true);
+    setError(null);
+    try {
+      await api("/api/leaderboard/visibility", { method: "POST", body: { visible } });
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : "บันทึกไม่สำเร็จ");
+    } finally {
+      setBoardBusy(false);
     }
   }
 
@@ -74,6 +88,28 @@ export default function SettingsPage() {
         </form>
       </section>
 
+      {GAME_CONFIG.leaderboard.enabled && me && (
+        <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-brand-100">
+          <label htmlFor="leaderboard-visible" className="flex items-center justify-between gap-4">
+            <span>
+              <span className="block font-semibold text-brand-900">แสดงชื่อในกระดานอันดับ</span>
+              <span className="block text-sm text-gray-600">
+                คนอื่นจะเห็นชื่อเล่นและจำนวนจุดของคุณ ไม่เห็นตำแหน่ง ปิดแล้วชื่อจะถูกลบออกทันที
+              </span>
+            </span>
+            <input
+              id="leaderboard-visible"
+              type="checkbox"
+              role="switch"
+              checked={me.profile.leaderboardVisible}
+              disabled={boardBusy}
+              onChange={(e) => void toggleLeaderboard(e.target.checked)}
+              className="h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-gray-300 transition before:block before:h-5 before:w-5 before:translate-x-0.5 before:rounded-full before:bg-white before:shadow before:transition checked:bg-brand-600 checked:before:translate-x-5 disabled:opacity-50"
+            />
+          </label>
+        </section>
+      )}
+
       <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-brand-100">
         <h2 className="mb-2 font-semibold text-brand-900">เล่นอย่างปลอดภัย</h2>
         <ul className="space-y-2 text-sm text-gray-800">
@@ -93,7 +129,7 @@ export default function SettingsPage() {
         <h2 className="mb-2 font-semibold text-brand-900">ความเป็นส่วนตัว</h2>
         <p className="text-sm text-gray-700">
           RunSphere เป็นต้นแบบเพื่อการทดลอง ใช้ตำแหน่งเพื่อหาจุดภารกิจและตรวจการถึงจุดเท่านั้น
-          ไม่เก็บเส้นทางเดิน และไม่แสดงตำแหน่งของคุณให้คนอื่นเห็น
+          ไม่เก็บเส้นทางเดิน และไม่แสดงตำแหน่งของคุณให้คนอื่นเห็น (คนอื่นเห็นแค่ชื่อเล่นและจำนวนจุดในกระดานอันดับ)
         </p>
         <Link href="/privacy" className="mt-2 inline-block text-sm font-semibold text-brand-700 underline">
           อ่านรายละเอียด
