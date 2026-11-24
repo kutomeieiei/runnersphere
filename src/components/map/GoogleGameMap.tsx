@@ -17,9 +17,15 @@ import { MAP_BOUNDS, MAP_CENTER, MAP_ID, MAPS_API_KEY, type MapMarkers } from ".
  * แผนที่ Google (Maps JavaScript API เท่านั้น — ไม่ใช้ Places/Directions/Geocoding)
  * component นี้ถูก mount ครั้งเดียวใน layout ของเกม และไม่ถูก remount เมื่อสลับหน้า
  */
-export function GoogleGameMap({ player, target, onPick, recenterSignal }: MapMarkers & { recenterSignal: number }) {
+export function GoogleGameMap({
+  player,
+  target,
+  onPick,
+  recenterSignal,
+  onLoadError,
+}: MapMarkers & { recenterSignal: number; onLoadError?: () => void }) {
   return (
-    <APIProvider apiKey={MAPS_API_KEY} language="th" region="TH">
+    <APIProvider apiKey={MAPS_API_KEY} language="th" region="TH" onError={onLoadError}>
       <Map
         className="h-full w-full"
         mapId={MAP_ID}

@@ -8,7 +8,7 @@ import { MAP_BOUNDS, type MapMarkers } from "./mapConfig";
  * แผนที่จำลอง (SVG) ใช้เมื่อยังไม่ได้ใส่ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
  * เพื่อให้พัฒนา/เดโมบนคอมพิวเตอร์ได้โดยไม่เสียค่าใช้จ่าย
  */
-export function FallbackMap({ player, target, onPick }: MapMarkers) {
+export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { notice: string }) {
   const { north, south, east, west } = MAP_BOUNDS;
   const midLat = (north + south) / 2;
   const kx = Math.cos((midLat * Math.PI) / 180);
@@ -89,7 +89,7 @@ export function FallbackMap({ player, target, onPick }: MapMarkers) {
         )}
       </svg>
       <div className="pointer-events-none absolute bottom-[19rem] left-3 max-w-[60%] rounded-full bg-black/60 px-3 py-1 text-[11px] text-white">
-        แผนที่จำลอง (ยังไม่ได้ใส่ Google Maps API key)
+        {notice}
       </div>
     </div>
   );
