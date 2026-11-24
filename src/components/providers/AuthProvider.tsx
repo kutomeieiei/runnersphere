@@ -10,6 +10,8 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   configured: boolean;
+  /** กำลังออกจากระบบโดยตั้งใจ (ให้ guard ไม่ redirect ซ้อน) */
+  signingOut: boolean;
   signOut: (reason?: "expired" | "deleted") => Promise<void>;
   /** โหลดสถานะผู้ใช้ใหม่ (เช่น หลังยืนยันอีเมล) */
   reloadUser: () => Promise<void>;
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(isFirebaseConfigured);
   // user object ของ Firebase ถูกแก้ไขในที่ (mutate) หลัง reload() จึงต้องบังคับ re-render
   const [version, setVersion] = useState(0);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -30,11 +33,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return onIdTokenChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      if (u) setSigningOut(false);
     });
   }, []);
 
   const signOut = useCallback(
     async (reason?: "expired" | "deleted") => {
+      setSigningOut(true);
       const auth = getFirebaseAuth();
       if (auth) await fbSignOut(auth).catch(() => undefined);
       router.replace(reason ? `/login?reason=${reason}` : "/login");
@@ -59,9 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, configured: isFirebaseConfigured, signOut, reloadUser }),
+    () => ({ user, loading, configured: isFirebaseConfigured, signingOut, signOut, reloadUser }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, loading, signOut, reloadUser, version],
+    [user, loading, signingOut, signOut, reloadUser, version],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -88,7 +88,7 @@ export function FallbackMap({ player, target, onPick }: MapMarkers) {
           </g>
         )}
       </svg>
-      <div className="pointer-events-none absolute left-1/2 top-24 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+      <div className="pointer-events-none absolute bottom-[19rem] left-3 max-w-[60%] rounded-full bg-black/60 px-3 py-1 text-[11px] text-white">
         แผนที่จำลอง (ยังไม่ได้ใส่ Google Maps API key)
       </div>
     </div>

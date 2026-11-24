@@ -63,7 +63,7 @@ export default function PetPage() {
             </span>
           )}
           {floaters.map((f) => (
-            <span key={f.id} className="animate-float-up absolute top-4 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-xs font-bold text-brand-700 shadow">
+            <span key={f.id} className="animate-float-up absolute top-12 whitespace-nowrap rounded-full bg-white/90 px-2 py-0.5 text-xs font-bold text-brand-700 shadow">
               {f.text}
             </span>
           ))}

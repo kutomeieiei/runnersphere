@@ -10,12 +10,12 @@ import { GAME_CONFIG } from "@/config/game";
 /** ฉลองเมื่อถึงจุด + เตือนให้พักดื่มน้ำ */
 export function RewardModal() {
   const { reward, dismissReward, missionNotice, dismissMissionNotice } = useGame();
-  const [showRest, setShowRest] = useState(false);
+  const [rest, setRest] = useState<null | "rest" | "cap">(null);
 
   function close() {
-    const rest = reward?.restReminder || reward?.dailyCapReached;
+    const kind = reward?.dailyCapReached ? "cap" : reward?.restReminder ? "rest" : null;
     dismissReward();
-    if (rest) setShowRest(true);
+    setRest(kind);
   }
 
   return (
@@ -45,11 +45,17 @@ export function RewardModal() {
         )}
       </Modal>
 
-      <Modal open={showRest} title="พักสักนิดนะ 💧" onClose={() => setShowRest(false)}>
+      <Modal
+        open={rest !== null}
+        title={rest === "cap" ? "ครบโควตาวันนี้แล้ว 🏅" : "พักสักนิดนะ 💧"}
+        onClose={() => setRest(null)}
+      >
         <p className="text-gray-700">
-          เดินมาหลายจุดแล้ว เก่งมาก! หาที่ร่มนั่งพัก ดื่มน้ำสักแก้ว แล้วค่อยไปต่อ
+          {rest === "cap"
+            ? `วันนี้เดินครบ ${GAME_CONFIG.health.dailySpotCap} จุดแล้ว สุดยอด! พักผ่อน ดื่มน้ำ แล้วกลับมาเล่นใหม่พรุ่งนี้นะ`
+            : "เดินมาหลายจุดแล้ว เก่งมาก! หาที่ร่มนั่งพัก ดื่มน้ำสักแก้ว แล้วค่อยไปต่อ"}
         </p>
-        <Button className="mt-4 w-full" onClick={() => setShowRest(false)}>
+        <Button className="mt-4 w-full" onClick={() => setRest(null)}>
           โอเค พักก่อน
         </Button>
       </Modal>

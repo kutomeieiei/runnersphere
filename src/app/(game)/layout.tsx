@@ -14,16 +14,16 @@ import { GAME_CONFIG } from "@/config/game";
  * - แผนที่ถูก mount ที่นี่ครั้งเดียว จึงไม่ remount เมื่อสลับหน้า (ประหยัด map load)
  */
 export default function GameLayout({ children }: LayoutProps<"/">) {
-  const { user, loading, configured } = useAuth();
+  const { user, loading, configured, signingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const needsVerify = GAME_CONFIG.features.requireEmailVerification && user && !user.emailVerified;
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || signingOut) return;
     if (!user) router.replace(`/login?reason=required&next=${encodeURIComponent(pathname)}`);
     else if (needsVerify) router.replace("/verify-email");
-  }, [loading, user, needsVerify, router, pathname]);
+  }, [loading, signingOut, user, needsVerify, router, pathname]);
 
   if (!configured) {
     return (

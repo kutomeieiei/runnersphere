@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 
 export function Modal({
   open,
@@ -23,8 +24,9 @@ export function Modal({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, dismissible, onClose]);
 
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+  // render ผ่าน portal ไปที่ body เพื่อไม่ให้ถูกบังด้วย stacking context ของ layout (เช่น bottom nav)
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
       onClick={() => dismissible && onClose?.()}
@@ -41,6 +43,7 @@ export function Modal({
         </h2>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

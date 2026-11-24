@@ -116,7 +116,10 @@ export function GeoProvider({ children, active }: { children: React.ReactNode; a
         });
       },
       (err) => {
-        if (err.code === err.PERMISSION_DENIED) setStatus("denied");
+        if (err.code === err.PERMISSION_DENIED) {
+          setStatus("denied");
+          setFix(null);
+        }
         else if (err.code === err.TIMEOUT) setStatus("timeout");
         else setStatus("unavailable");
       },
@@ -149,8 +152,11 @@ export function GeoProvider({ children, active }: { children: React.ReactNode; a
     if (!active || !wanted || !mock.enabled) return;
     const tick = () => {
       const s = mockGps.get();
-      if (s.mode === "denied") return setStatus("denied");
-      if (s.mode === "unavailable") return setStatus("unavailable");
+      if (s.mode !== "ok") {
+        setStatus(s.mode === "denied" ? "denied" : "unavailable");
+        setFix(null);
+        return;
+      }
       let position = s.position;
       if (s.walkTarget) {
         position = moveTowards(s.position, s.walkTarget, (s.speedMps * MOCK_INTERVAL_MS) / 1000);
