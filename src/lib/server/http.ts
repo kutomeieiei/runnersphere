@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { messageFor, type ApiErrorCode } from "@/lib/errors";
 
 export class ApiError extends Error {
@@ -34,6 +35,8 @@ export function route(handler: (req: Request) => Promise<Response>) {
     try {
       return await handler(req);
     } catch (err) {
+      // ปล่อย error ภายในของ Next.js (เช่น การ bail out จาก prerender) ให้ framework จัดการ
+      unstable_rethrow(err);
       return errorResponse(err);
     }
   };

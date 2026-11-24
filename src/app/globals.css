@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fadf;
+  --color-brand-200: #a6f4c5;
+  --color-brand-300: #6ce9a6;
+  --color-brand-400: #32d583;
+  --color-brand-500: #12b76a;
+  --color-brand-600: #039855;
+  --color-brand-700: #027a48;
+  --color-brand-800: #05603a;
+  --color-brand-900: #054f31;
+  --color-sun-400: #fdb022;
+  --color-sun-500: #f79009;
+  --font-sans: var(--font-prompt), ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f6fbf7;
+  --foreground: #10241a;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* ระยะเผื่อ notch / home indicator บนมือถือ */
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 0.75rem);
+}
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+@keyframes pet-bounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-18px) scale(0.96, 1.05); }
+  55% { transform: translateY(0) scale(1.08, 0.92); }
+  75% { transform: translateY(-6px) scale(0.98, 1.02); }
+}
+@keyframes pet-idle {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-3px) scale(1.01, 0.99); }
+}
+@keyframes chomp {
+  0%, 100% { transform: scaleY(1); }
+  25%, 75% { transform: scaleY(0.2); }
+  50% { transform: scaleY(1.2); }
+}
+@keyframes food-fly {
+  0% { transform: translate(var(--from-x, 0), var(--from-y, 120px)) scale(1); opacity: 1; }
+  80% { transform: translate(0, 0) scale(0.7); opacity: 1; }
+  100% { transform: translate(0, 0) scale(0.1); opacity: 0; }
+}
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-60px); opacity: 0; }
+}
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.animate-pet-bounce { animation: pet-bounce 0.9s ease-in-out 2; }
+.animate-pet-idle { animation: pet-idle 2.6s ease-in-out infinite; }
+.animate-chomp { animation: chomp 0.35s ease-in-out 5; transform-origin: center; transform-box: fill-box; }
+.animate-food-fly { animation: food-fly 0.7s ease-in forwards; }
+.animate-float-up { animation: float-up 1.4s ease-out forwards; }
+.animate-pop-in { animation: pop-in 0.35s ease-out; }
+.animate-pulse-ring { animation: pulse-ring 1.8s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pet-bounce, .animate-pet-idle, .animate-chomp, .animate-food-fly,
+  .animate-float-up, .animate-pop-in, .animate-pulse-ring {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

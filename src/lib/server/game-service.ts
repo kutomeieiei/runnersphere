@@ -139,7 +139,6 @@ async function readActiveMission(
 export function normalizeNickname(raw: unknown): string {
   if (typeof raw !== "string") throw new ApiError(400, "invalid_nickname");
   // ตัดอักขระควบคุมและช่องว่างซ้ำ
-  // eslint-disable-next-line no-control-regex
   const cleaned = raw.replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim();
   const length = [...cleaned].length;
   if (length < 1 || length > GAME_CONFIG.profile.nicknameMaxLength) {
