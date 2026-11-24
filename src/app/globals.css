@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #ecfdf3;
-  --color-brand-100: #d1fadf;
-  --color-brand-200: #a6f4c5;
-  --color-brand-300: #6ce9a6;
-  --color-brand-400: #32d583;
-  --color-brand-500: #12b76a;
-  --color-brand-600: #039855;
-  --color-brand-700: #027a48;
-  --color-brand-800: #05603a;
-  --color-brand-900: #054f31;
+  /* ธีมส้ม-แดง (sunset) — ปุ่มหลักใช้ 600 (ตัวอักษรขาว contrast 4.8:1) */
+  --color-brand-50: #fff4ed;
+  --color-brand-100: #ffe4d3;
+  --color-brand-200: #ffc6a3;
+  --color-brand-300: #ffa06b;
+  --color-brand-400: #fb7a3c;
+  --color-brand-500: #f25a1d;
+  --color-brand-600: #d23a0b;
+  --color-brand-700: #b42d0e;
+  --color-brand-800: #8f2612;
+  --color-brand-900: #6e2014;
   --color-sun-400: #fdb022;
   --color-sun-500: #f79009;
   --font-sans: var(--font-prompt), ui-sans-serif, system-ui, sans-serif;
@@ -18,8 +19,8 @@
 
 :root {
   color-scheme: light;
-  --background: #f6fbf7;
-  --foreground: #10241a;
+  --background: #fff7f2;
+  --foreground: #2a1410;
 }
 
 html,

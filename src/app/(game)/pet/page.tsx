@@ -139,9 +139,9 @@ export default function PetPage() {
         <p className="mt-1 text-center font-medium text-gray-800">{eating ? "อร่อยจัง! 😋" : cheering ? "ชอบมากเลย! 💖" : MOOD_TEXT[pet.mood]}</p>
 
         <div className="mt-4 space-y-3 rounded-2xl bg-white/80 p-3">
-          <StatBar label="ความอิ่ม" icon="🍚" value={pet.fullness} color="#f79009" />
-          <StatBar label="ความสุข" icon="💖" value={pet.happiness} color="#f063b8" />
-          <StatBar label={`XP สู่เลเวล ${pet.level + 1}`} icon="⭐" value={pet.xp} max={pet.xpToNext} color="#12b76a" />
+          <StatBar label="ความอิ่ม" icon="🍚" value={pet.fullness} color="#f59e0b" />
+          <StatBar label="ความสุข" icon="💖" value={pet.happiness} color="#ec4899" />
+          <StatBar label={`XP สู่เลเวล ${pet.level + 1}`} icon="⭐" value={pet.xp} max={pet.xpToNext} color="#d23a0b" />
         </div>
       </section>
 

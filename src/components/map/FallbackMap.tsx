@@ -46,7 +46,7 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
   const tp = target ? project(target) : null;
 
   return (
-    <div className="relative h-full w-full bg-[#1f3b2d]">
+    <div className="relative h-full w-full bg-[#2b1d18]">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="xMidYMid meet"
@@ -61,7 +61,7 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
           </pattern>
         </defs>
         <rect width={W} height={H} fill="url(#grid)" />
-        <polygon points={poly.join(" ")} fill="#32d58322" stroke="#32d583" strokeWidth="4" />
+        <polygon points={poly.join(" ")} fill="#ff6b3522" stroke="#ff7a3c" strokeWidth="4" />
         {SPOTS.map((s) => {
           const { x, y } = project(s.position);
           return (
@@ -75,7 +75,7 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
         })}
         {tp && target && (
           <g>
-            <circle cx={tp.x} cy={tp.y} r={target.radiusM * metersToPx} fill="#fdb02255" stroke="#fdb022" strokeWidth="3" />
+            <circle cx={tp.x} cy={tp.y} r={target.radiusM * metersToPx} fill="#facc1555" stroke="#facc15" strokeWidth="3" />
             <text x={tp.x} y={tp.y - 14} fontSize="40" textAnchor="middle">
               🚩
             </text>

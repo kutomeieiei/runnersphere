@@ -4,7 +4,7 @@ const tones: Record<Tone, string> = {
   info: "bg-sky-50 text-sky-900 ring-sky-200",
   warning: "bg-amber-50 text-amber-900 ring-amber-200",
   error: "bg-red-50 text-red-900 ring-red-200",
-  success: "bg-brand-50 text-brand-900 ring-brand-200",
+  success: "bg-emerald-50 text-emerald-900 ring-emerald-200",
 };
 
 const icons: Record<Tone, string> = { info: "ℹ️", warning: "⚠️", error: "⛔", success: "✅" };

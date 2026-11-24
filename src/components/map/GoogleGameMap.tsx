@@ -46,10 +46,10 @@ export function GoogleGameMap({
       >
         <Polygon
           paths={GEOFENCE.polygon}
-          strokeColor="#32d583"
+          strokeColor="#ff6b35"
           strokeOpacity={0.9}
           strokeWeight={3}
-          fillColor="#32d583"
+          fillColor="#ff6b35"
           fillOpacity={0.06}
           clickable={false}
         />
@@ -58,9 +58,9 @@ export function GoogleGameMap({
             <Circle
               center={target}
               radius={target.radiusM}
-              strokeColor="#fdb022"
+              strokeColor="#facc15"
               strokeWeight={2}
-              fillColor="#fdb022"
+              fillColor="#facc15"
               fillOpacity={0.25}
               clickable={false}
             />
