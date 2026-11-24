@@ -1,4 +1,4 @@
-import { PET_CONFIG, type Food } from "@/config/pets";
+import { PET_CONFIG, type AccessorySlot, type Food } from "@/config/pets";
 
 export type PetState = {
   speciesId: string;
@@ -9,6 +9,8 @@ export type PetState = {
   level: number;
   /** เวลาที่คำนวณค่าสถานะล่าสุด (ms) */
   updatedAt: number;
+  /** ของแต่งตัวที่ใส่อยู่ (ช่องละ 1 ชิ้น) */
+  equipped?: Partial<Record<AccessorySlot, string>>;
 };
 
 export type PetMood = "happy" | "ok" | "hungry" | "tired";
@@ -89,6 +91,7 @@ export function newPet(speciesId: string, name: string, nowMs: number, cfg: PetC
     xp: 0,
     level: 1,
     updatedAt: nowMs,
+    equipped: {},
   };
 }
 

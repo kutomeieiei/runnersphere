@@ -21,6 +21,11 @@ export type ApiErrorCode =
   | "no_active_mission"
   | "not_enough_coins"
   | "unknown_food"
+  | "unknown_species"
+  | "species_locked"
+  | "unknown_accessory"
+  | "accessory_not_owned"
+  | "already_owned"
   | "rate_limited"
   | "server_misconfigured"
   | "offline"
@@ -50,6 +55,11 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   no_active_mission: "ไม่มีภารกิจที่กำลังทำอยู่",
   not_enough_coins: "เหรียญไม่พอ ออกไปเดินเก็บเหรียญเพิ่มกันเถอะ!",
   unknown_food: "ไม่พบอาหารนี้",
+  unknown_species: "ไม่พบสัตว์เลี้ยงชนิดนี้",
+  species_locked: "ยังปลดล็อกไม่ได้ เลี้ยงสัตว์ตัวที่มีให้เลเวลสูงขึ้นก่อนนะ",
+  unknown_accessory: "ไม่พบของชิ้นนี้",
+  accessory_not_owned: "ต้องซื้อของชิ้นนี้ก่อนจึงจะใส่ได้",
+  already_owned: "คุณมีของชิ้นนี้แล้ว",
   rate_limited: "ส่งคำขอถี่เกินไป รอสักครู่",
   server_misconfigured: "ระบบยังตั้งค่าไม่ครบ (ผู้ดูแลต้องใส่ค่า environment ของ Firebase)",
   offline: "ไม่มีอินเทอร์เน็ต กรุณาเชื่อมต่อแล้วลองใหม่",

@@ -155,6 +155,43 @@ const petPatch = await fetch(`${FS}/users/${a.uid}/pets/main?updateMask.fieldPat
 ok(petPatch.status === 403, "rules: cannot write pet stats", petPatch.status);
 ok(await fsGet(a.token, `config/geofence`) === 403, "rules: other collections closed");
 
+// wardrobe + species
+const coinsBefore = (await call(a.token, "/api/me")).body.profile.coins;
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "equip", accessoryId: "red-scarf" });
+ok(r.status === 403 && r.body.error.code === "accessory_not_owned", "cannot equip unowned accessory", r.body);
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "buy", accessoryId: "red-scarf" });
+ok(r.status === 200 && r.body.coins === coinsBefore - 15, "buy scarf costs 15 coins", r.body);
+r = await call(a.token, "/api/me");
+ok(r.body.inventory.includes("red-scarf") && r.body.pet.equipped?.neck === "red-scarf", "scarf owned and worn", { inv: r.body.inventory, eq: r.body.pet.equipped });
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "buy", accessoryId: "red-scarf" });
+ok(r.status === 409, "cannot buy twice", r.body);
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "buy", accessoryId: "flower-crown" });
+ok(r.status === 402 && r.body.error.code === "not_enough_coins", "not enough coins for crown", r.body);
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "unequip", slot: "neck" });
+r = await call(a.token, "/api/me");
+ok(r.status === 200 && !r.body.pet.equipped?.neck, "unequip works", r.body.pet.equipped);
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "equip", accessoryId: "red-scarf" });
+ok(r.status === 200, "re-equip owned scarf", r.body);
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "fly", accessoryId: "red-scarf" });
+ok(r.status === 400, "invalid accessory action rejected", r.body);
+
+r = await call(a.token, "/api/pet/active", "POST", { speciesId: "mali" });
+ok(r.status === 403 && r.body.error.code === "species_locked", "bunny locked at level 1", r.body);
+r = await call(a.token, "/api/pet/active", "POST", { speciesId: "unicorn" });
+ok(r.status === 400 && r.body.error.code === "unknown_species", "unknown species rejected", r.body);
+// จำลองว่าเลี้ยงจนเลเวล 3 แล้ว (เขียนตรงด้วยสิทธิ์ admin ของ emulator)
+await fetch(`${FS}/users/${a.uid}/pets/main?updateMask.fieldPaths=level`, { method: "PATCH", headers: { authorization: "Bearer owner", "content-type": "application/json" }, body: JSON.stringify({ fields: { level: { integerValue: "3" } } }) });
+r = await call(a.token, "/api/pet/active", "POST", { speciesId: "mali" });
+ok(r.status === 200 && r.body.activePetId === "mali", "adopt bunny at level 3", r.body);
+r = await call(a.token, "/api/me");
+ok(r.body.pet.speciesId === "mali" && r.body.pet.level === 1 && r.body.pets.length === 2 && r.body.bestLevel === 3, "bunny active at level 1, two pets", { pet: r.body.pet, pets: r.body.pets });
+ok(!r.body.pet.equipped?.neck && r.body.inventory.includes("red-scarf"), "inventory shared, new pet starts undressed", r.body.pet.equipped);
+r = await call(a.token, "/api/pet/accessory", "POST", { action: "equip", accessoryId: "red-scarf" });
+ok(r.status === 200, "owned scarf usable on second pet", r.body);
+r = await call(a.token, "/api/pet/active", "POST", { speciesId: "puifai" });
+r = await call(a.token, "/api/me");
+ok(r.body.pet.speciesId === "puifai" && r.body.pet.level === 3 && r.body.pet.equipped?.neck === "red-scarf", "switch back keeps level and outfit", r.body.pet);
+
 // delete account
 r = await call(a.token, "/api/account", "DELETE");
 ok(r.status === 200, "account deleted", r);

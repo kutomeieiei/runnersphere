@@ -33,9 +33,27 @@ export type ProfileSummary = {
   leaderboardVisible: boolean;
 };
 
+export type PetSummary = {
+  id: string;
+  speciesId: string;
+  name: string;
+  level: number;
+  /** ตัวที่กำลังออกเดินด้วย */
+  active: boolean;
+};
+
+export type PetActionResponse = { activePetId: string; coins: number };
+
 export type MeResponse = {
   profile: ProfileSummary;
+  /** ตัวที่กำลังออกเดินด้วย */
   pet: PublicPet;
+  /** สัตว์เลี้ยงทุกตัวที่มี */
+  pets: PetSummary[];
+  /** เลเวลสูงสุดในบรรดาสัตว์เลี้ยงทั้งหมด (ใช้ปลดล็อกชนิดใหม่) */
+  bestLevel: number;
+  /** ของแต่งตัวที่ซื้อแล้ว */
+  inventory: string[];
   activeMission: PublicMission | null;
   today: DailyStats;
   week: DailyStats[];

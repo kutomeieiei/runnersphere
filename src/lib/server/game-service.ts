@@ -1,6 +1,14 @@
 import { FieldValue, type DocumentReference, type Transaction } from "firebase-admin/firestore";
 import { GAME_CONFIG, GEOFENCE, SPOTS, type LatLng } from "@/config/game";
-import { DEFAULT_SPECIES_ID, PET_CONFIG, PET_SPECIES, findFood } from "@/config/pets";
+import {
+  DEFAULT_SPECIES_ID,
+  PET_CONFIG,
+  PET_SPECIES,
+  findAccessory,
+  findFood,
+  findSpecies,
+  type AccessorySlot,
+} from "@/config/pets";
 import type {
   CheckResponse,
   DailyStats,
@@ -8,6 +16,8 @@ import type {
   LeaderboardResponse,
   MeResponse,
   MissionHistoryItem,
+  PetActionResponse,
+  PetSummary,
   PublicMission,
   PublicPet,
   StartMissionResponse,
@@ -24,6 +34,7 @@ import { pointInPolygon } from "@/lib/geo";
 import { containsBlockedWord, rankEntries, type LeaderboardEntry } from "@/lib/leaderboard";
 import { calcCoins, minTravelMs, selectSpot } from "@/lib/missions";
 import { applyDecay, feedPet, newPet, petMood, rewardPetForMission, type PetState } from "@/lib/pet";
+import { adoptVerdict, buyVerdict, equip, unequip } from "@/lib/wardrobe";
 import {
   dateKey,
   isWithinPlayHours,
@@ -39,7 +50,7 @@ import { ApiError } from "./http";
  * Firestore data model
  *
  *   users/{uid}                     UserDoc   (โปรไฟล์ เหรียญ ภารกิจปัจจุบัน ยอดรวม)
- *   users/{uid}/pets/{petId}        PetDoc    (แยกเป็น collection เพื่อเพิ่มชนิด/หลายตัวได้ภายหลัง)
+ *   users/{uid}/pets/{petId}        PetDoc    (สัตว์เลี้ยงทุกตัวที่รับเลี้ยง: "main" = ตัวแรก, ตัวอื่น id = speciesId)
  *   users/{uid}/missions/{id}       MissionDoc (ผลลัพธ์ภารกิจ — ไม่เก็บเส้นทางเดิน)
  *   users/{uid}/daily/{YYYY-MM-DD}  DailyStats (สถิติรายวัน)
  *   leaderboard/{วันจันทร์ YYYY-MM-DD}/entries/{uid}
@@ -60,6 +71,8 @@ type UserDoc = {
   leaderboardVisible?: boolean;
   /** สัปดาห์ที่เคยมีชื่อในกระดาน — ใช้ลบข้อมูลเมื่อซ่อนชื่อหรือลบบัญชี */
   leaderboardWeeks?: string[];
+  /** ของแต่งตัวที่ซื้อแล้ว (id) — ใช้ได้กับสัตว์เลี้ยงทุกตัว */
+  inventory?: string[];
   createdAt: number;
   updatedAt: number;
 };
@@ -85,7 +98,16 @@ type MissionDoc = MissionCheckState & {
 const MAIN_PET_ID = "main";
 
 const userRef = (uid: string) => db().collection("users").doc(uid);
-const petRef = (uid: string, petId: string) => userRef(uid).collection("pets").doc(petId);
+const petsCol = (uid: string) => userRef(uid).collection("pets");
+const petRef = (uid: string, petId: string) => petsCol(uid).doc(petId);
+/** ตัวแรกใช้ id "main" (ข้อมูลเดิม) ตัวที่รับเลี้ยงภายหลังใช้ speciesId เป็น id */
+const petIdFor = (speciesId: string) => (speciesId === DEFAULT_SPECIES_ID ? MAIN_PET_ID : speciesId);
+
+function toSummaries(docs: { id: string; data: PetDoc }[], activeId: string): PetSummary[] {
+  return docs
+    .map(({ id, data }) => ({ id, speciesId: data.speciesId, name: data.name, level: data.level, active: id === activeId }))
+    .sort((a, b) => (findSpecies(a.speciesId)?.unlockLevel ?? 0) - (findSpecies(b.speciesId)?.unlockLevel ?? 0));
+}
 const missionsCol = (uid: string) => userRef(uid).collection("missions");
 const dailyRef = (uid: string, key: string) => userRef(uid).collection("daily").doc(key);
 const entriesCol = (week: string) => db().collection("leaderboard").doc(week).collection("entries");
@@ -215,15 +237,17 @@ export async function getMe(uid: string): Promise<MeResponse> {
   const user = snap.data() as UserDoc;
 
   const keys = lastNDateKeys(now, 7);
-  const [petSnap, missionSnap, ...dailySnaps] = await db().getAll(
-    petRef(uid, user.activePetId),
-    missionsCol(uid).doc(user.activeMissionId ?? "_none"),
-    ...keys.map((k) => dailyRef(uid, k)),
-  );
+  const [petsSnap, [missionSnap, ...dailySnaps]] = await Promise.all([
+    petsCol(uid).get(),
+    db().getAll(missionsCol(uid).doc(user.activeMissionId ?? "_none"), ...keys.map((k) => dailyRef(uid, k))),
+  ]);
 
-  const petRaw = petSnap.exists
-    ? (petSnap.data() as PetDoc)
+  const pets = petsSnap.docs.map((d) => ({ id: d.id, data: d.data() as PetDoc }));
+  const activeDoc = pets.find((p) => p.id === user.activePetId);
+  const petRaw = activeDoc
+    ? activeDoc.data
     : newPet(DEFAULT_SPECIES_ID, PET_SPECIES[DEFAULT_SPECIES_ID].name, now);
+  // เฉพาะตัวที่ออกเดินด้วยเท่านั้นที่ค่าลดตามเวลา ตัวอื่น "พักอยู่บ้าน"
   const pet = applyDecay(petRaw, now);
 
   let activeMission: PublicMission | null = null;
@@ -244,6 +268,9 @@ export async function getMe(uid: string): Promise<MeResponse> {
       leaderboardVisible: isVisible(user),
     },
     pet: toPublicPet(user.activePetId, pet),
+    pets: toSummaries(pets.length ? pets : [{ id: user.activePetId, data: pet }], user.activePetId),
+    bestLevel: Math.max(pet.level, ...pets.map((p) => p.data.level)),
+    inventory: user.inventory ?? [],
     activeMission,
     today: week[week.length - 1],
     week,
@@ -629,5 +656,87 @@ export async function setLeaderboardVisible(uid: string, visible: unknown): Prom
       tx.update(userRef(uid), { leaderboardVisible: false, leaderboardWeeks: [], updatedAt: now });
     }
     return { visible };
+  });
+}
+
+/* ------------------------------------------------------------------------- */
+/* สัตว์เลี้ยงหลายตัว + ของแต่งตัว                                                */
+/* ------------------------------------------------------------------------- */
+
+/** เลือกตัวที่ออกเดินด้วย: สลับไปตัวที่มีอยู่ หรือรับเลี้ยงชนิดที่ปลดล็อกแล้ว */
+export async function setActivePet(uid: string, speciesId: unknown): Promise<PetActionResponse> {
+  if (typeof speciesId !== "string") throw new ApiError(400, "invalid_input");
+  const now = Date.now();
+  return db().runTransaction(async (tx) => {
+    const user = await readUser(tx, uid);
+    const petsSnap = await tx.get(petsCol(uid));
+    const pets = petsSnap.docs.map((d) => ({ id: d.id, data: d.data() as PetDoc }));
+    const bestLevel = Math.max(1, ...pets.map((p) => p.data.level));
+    const verdict = adoptVerdict(speciesId, bestLevel, pets.map((p) => p.data.speciesId));
+    if (verdict === "unknown") throw new ApiError(400, "unknown_species");
+    if (verdict === "locked") throw new ApiError(403, "species_locked");
+
+    const current = pets.find((p) => p.id === user.activePetId);
+    const targetId = verdict === "switch" ? pets.find((p) => p.data.speciesId === speciesId)!.id : petIdFor(speciesId);
+    if (current && current.id === targetId) return { activePetId: targetId, coins: user.coins };
+
+    // ตัวเดิม: คิดค่าลดถึงตอนนี้แล้วพักไว้
+    if (current) tx.set(petRef(uid, current.id), applyDecay(current.data, now));
+    if (verdict === "switch") {
+      // ตัวที่พักอยู่บ้าน: ค่าไม่ลดระหว่างพัก เริ่มนับใหม่จากตอนนี้
+      tx.update(petRef(uid, targetId), { updatedAt: now });
+    } else {
+      const species = findSpecies(speciesId)!;
+      tx.create(petRef(uid, targetId), newPet(species.id, species.name, now));
+    }
+    tx.update(userRef(uid), { activePetId: targetId, updatedAt: now });
+    return { activePetId: targetId, coins: user.coins };
+  });
+}
+
+/** ซื้อ / ใส่ / ถอด ของแต่งตัว (ซื้อแล้วใส่ให้ตัวปัจจุบันทันที) */
+export async function accessoryAction(
+  uid: string,
+  body: { action?: unknown; accessoryId?: unknown; slot?: unknown },
+): Promise<PetActionResponse> {
+  const now = Date.now();
+  const action = body?.action;
+  if (action !== "buy" && action !== "equip" && action !== "unequip") throw new ApiError(400, "invalid_input");
+
+  return db().runTransaction(async (tx) => {
+    const user = await readUser(tx, uid);
+    const pRef = petRef(uid, user.activePetId);
+    const petSnap = await tx.get(pRef);
+    const pet = petSnap.exists
+      ? (petSnap.data() as PetDoc)
+      : newPet(DEFAULT_SPECIES_ID, PET_SPECIES[DEFAULT_SPECIES_ID].name, now);
+    const inventory = user.inventory ?? [];
+
+    if (action === "unequip") {
+      const slot = body.slot as AccessorySlot;
+      if (slot !== "head" && slot !== "neck" && slot !== "face") throw new ApiError(400, "invalid_input");
+      tx.set(pRef, { ...pet, equipped: unequip(pet.equipped, slot) });
+      return { activePetId: user.activePetId, coins: user.coins };
+    }
+
+    const item = typeof body.accessoryId === "string" ? findAccessory(body.accessoryId) : undefined;
+    if (!item) throw new ApiError(400, "unknown_accessory");
+
+    if (action === "buy") {
+      const verdict = buyVerdict(item.id, inventory, user.coins);
+      if (verdict === "owned") throw new ApiError(409, "already_owned");
+      if (verdict === "not_enough_coins") throw new ApiError(402, "not_enough_coins");
+      tx.update(userRef(uid), {
+        coins: FieldValue.increment(-item.price),
+        inventory: FieldValue.arrayUnion(item.id),
+        updatedAt: now,
+      });
+      tx.set(pRef, { ...pet, equipped: equip(pet.equipped, item) });
+      return { activePetId: user.activePetId, coins: user.coins - item.price };
+    }
+
+    if (!inventory.includes(item.id)) throw new ApiError(403, "accessory_not_owned");
+    tx.set(pRef, { ...pet, equipped: equip(pet.equipped, item) });
+    return { activePetId: user.activePetId, coins: user.coins };
   });
 }

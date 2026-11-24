@@ -38,6 +38,8 @@
 - **ตรวจการถึงจุดที่ server เท่านั้น**: รัศมี 28 ม., accuracy ≤ 40 ม., ต้องอ่านในรัศมีติดกัน 3 ครั้ง
 - **กันโกงเบื้องต้น**: ตรวจ accuracy, ความเร็ว (จับ teleport), timestamp (กันค่าเก่า/ส่งซ้ำ), เวลาเดินขั้นต่ำ, rate limit
 - **เหรียญ + สัตว์เลี้ยง**: เหรียญตามระยะทาง/ความยาก, ความอิ่ม/ความสุขลดตามเวลา (ไม่ตาย ไม่หาย), เลเวล, อนิเมชันตอนกิน
+- **แต่งตัวสัตว์เลี้ยง**: ซื้อหมวก/ผ้าพันคอ/แว่นด้วยเหรียญ (ซื้อครั้งเดียวใส่ได้ทุกตัว) และปลดล็อกสัตว์ชนิดใหม่ที่เลเวล 3 / 5 / 8
+  รับเลี้ยงได้หลายตัว สลับตัวที่ออกเดินด้วยได้ ตัวที่พักอยู่บ้านค่าไม่ลด
 - **สุขภาพ**: ระยะทางสะสม, จำนวนจุด, สถิติรายวัน/สัปดาห์, คำเตือนความปลอดภัยก่อนเล่น, daily cap, เตือนพักดื่มน้ำ, ช่วงเวลาเล่น (ปิดเป็นค่าเริ่มต้น)
 - **กระดานอันดับรายสัปดาห์**: นับจำนวนจุดที่ไปถึง (เริ่มใหม่ทุกวันจันทร์) แสดงแค่ชื่อเล่น + ตัวเลข ซ่อนชื่อได้ในตั้งค่า และกรองชื่อเล่นที่ไม่สุภาพ
 - **ความเป็นส่วนตัว**: ไม่เก็บเส้นทางเดิน, หน้าอธิบายการใช้ตำแหน่ง (`/privacy`), ปุ่มลบบัญชี
@@ -231,7 +233,10 @@ polygon: [
 | `leaderboard.defaultVisible` | `true` | ผู้เล่นใหม่มีชื่อในกระดานโดยอัตโนมัติ (ตั้ง `false` = ต้องเปิดเอง) |
 | `profile.blockedWords` | | คำที่ห้ามใช้ในชื่อเล่น — เพิ่มได้ตามต้องการ |
 
-สัตว์เลี้ยงและอาหารอยู่ใน `src/config/pets.ts` (เพิ่มชนิดสัตว์ได้ที่ `PET_SPECIES`)
+สัตว์เลี้ยง อาหาร และของแต่งตัวอยู่ใน `src/config/pets.ts`:
+- **ชนิดสัตว์** (`PET_SPECIES`): ตั้งชื่อ สี รูปหู (`round` / `bunny` / `cat` / `frog`) และเลเวลที่ปลดล็อก (`unlockLevel`) — ห้ามเปลี่ยน `id` หลังเปิดใช้
+- **ของแต่งตัว** (`ACCESSORIES`): ชื่อ ช่อง (`head` / `neck` / `face`) และราคา — ชิ้นใหม่ต้องวาดรูปเพิ่มใน `src/components/pet/Accessories.tsx` ด้วย id เดียวกัน (มี test เตือนถ้าลืม)
+- **อาหาร** (`FOODS`) และอัตราลดค่าสถานะ (`PET_CONFIG`)
 
 ## 8. Mock GPS (ทดสอบบนคอมพิวเตอร์)
 
@@ -263,8 +268,8 @@ npm run dev                  # เทอร์มินัล 2 (ใช้ .env.
 npm run test:e2e             # เทอร์มินัล 3 — ใช้เวลา ~1–2 นาที (จำลองการเดินจริง)
 ```
 
-ตรวจ 54 กรณี เช่น token ไม่ถูกต้อง, uid จาก client ถูกเมิน, นอก geofence, accuracy แย่, ตำแหน่งโดยประมาณ, timestamp เก่า/ซ้ำ,
-teleport, rate limit, การเดินถึงจุด + ได้เหรียญ, cooldown, ไม่ซ้ำจุดเดิม, ให้อาหาร, เหรียญไม่พอ, Security Rules (อ่านได้เฉพาะของตัวเอง เขียนไม่ได้), กระดานอันดับ (อันดับ, ซ่อนชื่อ, ไม่หลุด uid, ชื่อไม่สุภาพ), ลบบัญชี
+ตรวจ 75 กรณี เช่น token ไม่ถูกต้อง, uid จาก client ถูกเมิน, นอก geofence, accuracy แย่, ตำแหน่งโดยประมาณ, timestamp เก่า/ซ้ำ,
+teleport, rate limit, การเดินถึงจุด + ได้เหรียญ, cooldown, ไม่ซ้ำจุดเดิม, ให้อาหาร, เหรียญไม่พอ, Security Rules (อ่านได้เฉพาะของตัวเอง เขียนไม่ได้), กระดานอันดับ (อันดับ, ซ่อนชื่อ, ไม่หลุด uid, ชื่อไม่สุภาพ), ซื้อ/ใส่/ถอดของแต่งตัว, ปลดล็อกและสลับสัตว์เลี้ยง, ลบบัญชี
 ถ้าแก้ geofence แล้ว ให้ตั้ง `E2E_CENTER="lat,lng"` เป็นจุดที่อยู่ในโรงเรียน
 
 ---
@@ -284,12 +289,13 @@ src/
     arrival.ts         ตรวจการถึงจุดทีละครั้ง (state machine)
     anticheat.ts       timestamp, ความเร็ว, rate limit
     pet.ts             ลดค่าตามเวลา, ให้อาหาร, เลเวล
+    wardrobe.ts        ปลดล็อกชนิด, ซื้อ/ใส่/ถอดของแต่งตัว
     server/            ← ใช้เฉพาะฝั่ง server
       firebase-admin.ts, auth.ts (ตรวจ ID token), game-service.ts (Firestore transactions)
   app/
     (auth)/            login, register, forgot-password, verify-email
     (game)/            layout (auth guard + แผนที่ถาวร) + play, pet, leaderboard, stats, settings
-    api/               Route Handlers: profile, me, stats, leaderboard, missions/{start,check,cancel}, pet/feed, account
+    api/               Route Handlers: profile, me, stats, leaderboard, missions/{start,check,cancel}, pet/{feed,accessory,active}, account
     privacy/           หน้าอธิบายการใช้ตำแหน่ง
   components/          UI, providers (Auth/Geo/Game), map, pet
 firestore.rules        Security Rules
@@ -301,7 +307,7 @@ scripts/e2e-emulator.mjs
 | Path | เนื้อหา |
 | --- | --- |
 | `users/{uid}` | ชื่อเล่น, เหรียญ, `activeMissionId`, `lastSpotId`, ยอดรวม (จุด/ระยะ/เหรียญ) |
-| `users/{uid}/pets/{petId}` | ชนิด, ความอิ่ม, ความสุข, XP, เลเวล, `updatedAt` (ใช้ collection เพื่อรองรับหลายตัว/หลายชนิดในอนาคต) |
+| `users/{uid}/pets/{petId}` | ชนิด, ความอิ่ม, ความสุข, XP, เลเวล, ของที่ใส่อยู่ (`equipped`), `updatedAt` — ตัวแรก id `main` ตัวที่รับเลี้ยงเพิ่ม id = ชนิด · `users/{uid}.activePetId` = ตัวที่ออกเดินด้วย, `users/{uid}.inventory` = ของแต่งตัวที่ซื้อแล้ว |
 | `users/{uid}/missions/{id}` | จุด, สถานะ, เวลาเริ่ม/จบ, เหรียญ, ระยะทางโดยประมาณ — **ไม่มีเส้นทางเดิน** (ตำแหน่งล่าสุด 1 จุดถูกเก็บชั่วคราวเพื่อตรวจความเร็ว และลบเมื่อจบภารกิจ) |
 | `users/{uid}/daily/{YYYY-MM-DD}` | จำนวนจุด, ระยะ, เหรียญของวันนั้น (เวลาไทย) |
 | `leaderboard/{วันจันทร์}/entries/{uid}` | ชื่อเล่น, จำนวนจุด, ระยะของสัปดาห์ — เขียนโดย server ตอนถึงจุด, client อ่านตรงไม่ได้ (ผ่าน `/api/leaderboard` ซึ่งไม่ส่ง uid ของคนอื่น) |
