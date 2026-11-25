@@ -21,7 +21,7 @@ export default function PlayPage() {
         <div className="pointer-events-auto flex items-center justify-between rounded-2xl bg-white/90 px-3 py-2 shadow ring-1 ring-black/5 backdrop-blur">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-brand-900">
-              {me ? `สวัสดี ${me.profile.nickname} 👋` : loading ? "กำลังโหลด…" : "RunSphere"}
+              {me ? `สวัสดี ${me.profile.nickname} 👋` : loading ? "กำลังโหลด…" : "Movemai"}
             </p>
             {geo.fix && (
               <p className="text-xs text-gray-500">

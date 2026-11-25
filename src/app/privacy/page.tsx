@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-brand-900">ความเป็นส่วนตัวและการใช้ตำแหน่ง</h1>
       <div className="mt-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
-        <b>RunSphere เป็นต้นแบบ (prototype) เพื่อการทดลอง</b> ยังไม่ใช่บริการจริง
+        <b>Movemai เป็นต้นแบบ (prototype) เพื่อการทดลอง</b> ยังไม่ใช่บริการจริง
         ข้อมูลอาจถูกล้างได้ระหว่างการทดลอง
       </div>
 

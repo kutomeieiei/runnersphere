@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// RunSphere — Firestore Security Rules
+// Movemai — Firestore Security Rules
 //
 // หลักการ:
 // - ผู้ใช้ "อ่าน" ได้เฉพาะข้อมูลของตัวเอง (users/{uid} และ subcollections)

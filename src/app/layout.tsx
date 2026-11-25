@@ -12,10 +12,10 @@ const prompt = Prompt({
 });
 
 export const metadata: Metadata = {
-  title: { default: "RunSphere", template: "%s · RunSphere" },
+  title: { default: "Movemai", template: "%s · Movemai" },
   description: "เดินไปยังจุดภารกิจในโรงเรียน เก็บเหรียญ แล้วเลี้ยงสัตว์เลี้ยงของคุณ (ต้นแบบเพื่อการทดลอง)",
-  applicationName: "RunSphere",
-  appleWebApp: { capable: true, title: "RunSphere", statusBarStyle: "default" },
+  applicationName: "Movemai",
+  appleWebApp: { capable: true, title: "Movemai", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

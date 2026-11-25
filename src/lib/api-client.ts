@@ -3,7 +3,7 @@
 import { messageFor, type ApiErrorCode } from "./errors";
 import { getFirebaseAuth } from "./firebase/client";
 
-export const SESSION_EXPIRED_EVENT = "runsphere:session-expired";
+export const SESSION_EXPIRED_EVENT = "movemai:session-expired";
 
 export class ApiClientError extends Error {
   constructor(

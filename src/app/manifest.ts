@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "RunSphere — เดิน เก็บเหรียญ เลี้ยงสัตว์",
-    short_name: "RunSphere",
+    name: "Movemai — เดิน เก็บเหรียญ เลี้ยงสัตว์",
+    short_name: "Movemai",
     description: "เดินไปยังจุดภารกิจในโรงเรียน เก็บเหรียญ แล้วนำไปเลี้ยงสัตว์เลี้ยง (ต้นแบบ)",
     lang: "th",
     start_url: "/play",

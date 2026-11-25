@@ -1,4 +1,4 @@
-# RunSphere (ต้นแบบ / prototype)
+# Movemai (ต้นแบบ / prototype)
 
 เว็บแอปส่งเสริมสุขภาพสำหรับนักเรียน **โรงเรียนสาธิตมหาวิทยาลัยขอนแก่น (มอดินแดง)**
 ผู้เล่นเดินไปยังจุดที่สุ่มบนแผนที่ภายในโรงเรียน → ถึงจุดได้เหรียญ → นำเหรียญไปซื้ออาหารเลี้ยงสัตว์เลี้ยงในแอป
@@ -74,10 +74,10 @@ npm run emulators
 # เทอร์มินัล 2: สร้าง .env.local สำหรับ emulator แล้วรันแอป
 cat > .env.local <<'EOF'
 NEXT_PUBLIC_FIREBASE_API_KEY=demo-key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=demo-runsphere.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=demo-runsphere
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=demo-movemai.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=demo-movemai
 NEXT_PUBLIC_FIREBASE_APP_ID=demo-app
-FIREBASE_PROJECT_ID=demo-runsphere
+FIREBASE_PROJECT_ID=demo-movemai
 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099

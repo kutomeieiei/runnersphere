@@ -1,5 +1,5 @@
 {
-  "name": "runsphere",
+  "name": "movemai",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "emulators": "npx -y firebase-tools@15.36.0 emulators:start --only auth,firestore --project demo-runsphere",
+    "emulators": "npx -y firebase-tools@15.36.0 emulators:start --only auth,firestore --project demo-movemai",
     "test:e2e": "node scripts/e2e-emulator.mjs"
   },
   "dependencies": {

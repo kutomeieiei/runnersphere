@@ -1,9 +1,9 @@
-/* RunSphere service worker (PWA) — เรียบง่ายโดยตั้งใจ
+/* Movemai service worker (PWA) — เรียบง่ายโดยตั้งใจ
  * - ไม่ cache API (/api/*) เด็ดขาด ข้อมูลเกมต้องสดเสมอ
  * - static assets ของ Next (/_next/static, /icons) cache แบบ cache-first (ไฟล์มี hash)
  * - หน้าเว็บ: network-first ถ้าออฟไลน์จะแสดง /offline.html
  */
-const CACHE = "runsphere-v1";
+const CACHE = "movemai-v2";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {

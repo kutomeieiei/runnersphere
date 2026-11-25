@@ -128,7 +128,7 @@ export default function SettingsPage() {
       <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-brand-100">
         <h2 className="mb-2 font-semibold text-brand-900">ความเป็นส่วนตัว</h2>
         <p className="text-sm text-gray-700">
-          RunSphere เป็นต้นแบบเพื่อการทดลอง ใช้ตำแหน่งเพื่อหาจุดภารกิจและตรวจการถึงจุดเท่านั้น
+          Movemai เป็นต้นแบบเพื่อการทดลอง ใช้ตำแหน่งเพื่อหาจุดภารกิจและตรวจการถึงจุดเท่านั้น
           ไม่เก็บเส้นทางเดิน และไม่แสดงตำแหน่งของคุณให้คนอื่นเห็น (คนอื่นเห็นแค่ชื่อเล่นและจำนวนจุดในกระดานอันดับ)
         </p>
         <Link href="/privacy" className="mt-2 inline-block text-sm font-semibold text-brand-700 underline">

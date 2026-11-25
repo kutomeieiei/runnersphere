@@ -2,7 +2,7 @@
 // ตำแหน่งกลางโรงเรียนที่ใช้ทดสอบ: ตั้ง E2E_CENTER="lat,lng" ถ้าแก้ geofence แล้ว
 const BASE = process.env.E2E_BASE ?? "http://localhost:3000";
 const AUTH = "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1";
-const FS = "http://127.0.0.1:8080/v1/projects/demo-runsphere/databases/(default)/documents";
+const FS = "http://127.0.0.1:8080/v1/projects/demo-movemai/databases/(default)/documents";
 let failures = 0;
 const ok = (cond, msg, extra) => { console.log(`${cond ? "PASS" : "FAIL"}  ${msg}`, cond ? "" : JSON.stringify(extra ?? "")); if (!cond) failures++; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

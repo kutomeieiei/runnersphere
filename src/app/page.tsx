@@ -19,7 +19,7 @@ export default function HomePage() {
         <div className="mb-4 text-7xl" aria-hidden>
           🌏🐾
         </div>
-        <h1 className="text-4xl font-bold text-brand-800">RunSphere</h1>
+        <h1 className="text-4xl font-bold text-brand-800">Movemai</h1>
         <p className="mt-3 text-lg text-gray-700">
           เดินไปยังจุดภารกิจในโรงเรียน เก็บเหรียญ แล้วนำไปเลี้ยงสัตว์เลี้ยงของคุณ
         </p>
