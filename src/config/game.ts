@@ -119,9 +119,17 @@ export const GAME_CONFIG = {
   timeZone: "Asia/Bangkok",
 
   map: {
+    /**
+     * รูปแบบแผนที่ Google:
+     * - "roadmap" = แผนที่ถนนสีขาวแบบ Google Maps ปกติ (ค่าเริ่มต้น)
+     * - "hybrid"  = ภาพดาวเทียม + ชื่อสถานที่
+     */
+    mapType: "roadmap" as "roadmap" | "hybrid",
     defaultZoom: 18,
     minZoom: 16,
     maxZoom: 20,
+    /** ซูมออกได้ไกลแค่ไหนเมื่อผู้เล่นอยู่นอกโรงเรียน (เพื่อให้เห็นทั้งตัวเองและโรงเรียน) */
+    outsideMinZoom: 11,
     /** ระยะเผื่อรอบ geofence ที่ยังเลื่อนแผนที่ได้ (เมตร) */
     boundsPaddingM: 150,
   },

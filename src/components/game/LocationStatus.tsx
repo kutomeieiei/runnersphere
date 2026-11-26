@@ -4,7 +4,7 @@ import { useGeo } from "@/components/providers/GeoProvider";
 import { Alert } from "@/components/ui/Alert";
 import { GEOFENCE } from "@/config/game";
 import { ERROR_MESSAGES } from "@/lib/errors";
-import { pointInPolygon } from "@/lib/geo";
+import { centerOf, formatDistance, haversineM, pointInPolygon } from "@/lib/geo";
 
 /** ข้อความสถานะ GPS / สิทธิ์ตำแหน่ง / อยู่นอกพื้นที่ */
 export function LocationStatus() {
@@ -60,7 +60,10 @@ export function LocationStatus() {
   }
   if (!pointInPolygon(fix, GEOFENCE.polygon)) {
     return (
-      <Alert tone="warning" title="อยู่นอกพื้นที่โรงเรียน">
+      <Alert
+        tone="warning"
+        title={`อยู่นอกพื้นที่โรงเรียน (ห่างประมาณ ${formatDistance(haversineM(fix, centerOf(GEOFENCE.polygon)))})`}
+      >
         {ERROR_MESSAGES.outside_geofence}
       </Alert>
     );

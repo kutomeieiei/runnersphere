@@ -31,7 +31,8 @@
 
 - **ล็อกอินด้วยอีเมล + รหัสผ่าน** (Firebase Auth): สมัคร / เข้าสู่ระบบ / ลืมรหัสผ่าน, รหัสผ่านขั้นต่ำ 8 ตัว, error ภาษาไทย
   ขอแค่อีเมล รหัสผ่าน และ **ชื่อเล่น** (ไม่ต้องใช้ชื่อจริง) · การยืนยันอีเมลเป็น feature flag (ปิดเป็นค่าเริ่มต้น)
-- **แผนที่ Google แบบ hybrid** (ดาวเทียม + ชื่อสถานที่) จำกัดให้เลื่อนได้เฉพาะรอบโรงเรียน โหลดครั้งเดียวต่อ session ไม่ remount เมื่อสลับหน้า
+- **แผนที่ Google แบบถนนสีขาว** (เปลี่ยนเป็นดาวเทียม `hybrid` ได้ที่ `GAME_CONFIG.map.mapType`) จำกัดให้เลื่อนได้เฉพาะรอบโรงเรียน
+  แต่ถ้าผู้เล่นอยู่นอกโรงเรียน จะปลดล็อกและซูมให้เห็นทั้งผู้เล่นและโรงเรียน · โหลดครั้งเดียวต่อ session ไม่ remount เมื่อสลับหน้า
   ถ้ายังไม่มี key หรือ key ใช้ไม่ได้ จะใช้ **แผนที่จำลอง (SVG)** แทนอัตโนมัติ
 - **Geofence**: เริ่มเกมได้เฉพาะในโรงเรียน
 - **ภารกิจจุดสุ่ม** จากรายการที่เตรียมไว้ ห่าง 50–300 ม. ไม่ซ้ำจุดก่อนหน้า ครั้งละ 1 ภารกิจ แสดงระยะ ทิศทาง และลูกศร
@@ -51,7 +52,7 @@
 | ส่วน | ใช้ |
 | --- | --- |
 | Frontend | Next.js 16 (App Router) + TypeScript + Tailwind CSS 4, mobile-first, PWA |
-| Map | Google Maps JavaScript API ผ่าน `@vis.gl/react-google-maps` (mapTypeId `hybrid`) |
+| Map | Google Maps JavaScript API ผ่าน `@vis.gl/react-google-maps` (ค่าเริ่มต้น `roadmap`) |
 | Backend | Next.js Route Handlers (`src/app/api/*`) + Firebase Admin SDK |
 | Database/Auth | Firestore + Firebase Authentication (Email/Password) |
 | Hosting | Vercel |
