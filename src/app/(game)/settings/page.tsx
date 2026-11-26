@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { SAFETY_RULES } from "@/components/game/SafetyGate";
+import { useShell } from "@/components/game/GameShell";
+import { InstallApp } from "@/components/game/InstallApp";
+import { MeGate } from "@/components/game/MeGate";
+import { PageHeader } from "@/components/game/PageHeader";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useGame } from "@/components/providers/GameProvider";
 import { Alert } from "@/components/ui/Alert";
@@ -15,8 +19,16 @@ import { api, ApiClientError } from "@/lib/api-client";
 const CONFIRM_WORD = "ลบบัญชี";
 
 export default function SettingsPage() {
+  const { me } = useGame();
+  // รอข้อมูลผู้เล่นให้ครบก่อน เพื่อให้ช่องชื่อเล่นแสดงค่าปัจจุบันเสมอ
+  if (!me) return <MeGate />;
+  return <SettingsContent />;
+}
+
+function SettingsContent() {
   const { user, signOut } = useAuth();
   const { me, updateNickname, refresh } = useGame();
+  const { openHelp } = useShell();
   const [boardBusy, setBoardBusy] = useState(false);
   const [nickname, setNickname] = useState(me?.profile.nickname ?? "");
   const [saving, setSaving] = useState(false);
@@ -68,7 +80,17 @@ export default function SettingsPage() {
 
   return (
     <main className="safe-top mx-auto max-w-md space-y-4 px-4 pb-28">
-      <h1 className="py-3 text-2xl font-bold text-brand-900">ตั้งค่า</h1>
+      <PageHeader title="ตั้งค่า" subtitle="บัญชี ความเป็นส่วนตัว และความปลอดภัย" />
+
+      <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-brand-100">
+        <h2 className="mb-2 font-semibold text-brand-900">ช่วยเหลือ</h2>
+        <div className="space-y-3">
+          <Button variant="secondary" className="w-full" onClick={openHelp}>
+            ❓ วิธีเล่นและคำถามที่พบบ่อย
+          </Button>
+          <InstallApp />
+        </div>
+      </section>
 
       <section className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-brand-100">
         <h2 className="mb-1 font-semibold text-brand-900">บัญชี</h2>
@@ -79,6 +101,7 @@ export default function SettingsPage() {
             name="nickname"
             value={nickname}
             maxLength={GAME_CONFIG.profile.nicknameMaxLength}
+            showCount
             onChange={(e) => setNickname(e.target.value)}
           />
           {saved && <Alert tone="success">{saved}</Alert>}

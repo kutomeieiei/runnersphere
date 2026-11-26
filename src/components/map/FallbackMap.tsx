@@ -149,10 +149,8 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
           </g>
         )}
       </svg>
-      <div
-        className="pointer-events-none absolute left-3 max-w-[60%] rounded-full bg-gray-900/70 px-3 py-1 text-[11px] text-white"
-        style={{ bottom: 258 }}
-      >
+      {/* มุมบนขวาใต้หัวหน้า: ไม่ทับการ์ดภารกิจ (ถ้ามีกล่องเตือนด้านบน กล่องเตือนจะทับป้ายนี้แทน) */}
+      <div className="pointer-events-none absolute right-3 top-[5.5rem] max-w-[55%] rounded-full bg-gray-900/60 px-2.5 py-0.5 text-[10px] text-white">
         {notice}
       </div>
     </div>

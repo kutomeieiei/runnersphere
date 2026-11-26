@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { PageHeader } from "@/components/game/PageHeader";
 import { useGame } from "@/components/providers/GameProvider";
 import { Alert } from "@/components/ui/Alert";
 import { api, ApiClientError } from "@/lib/api-client";
@@ -48,23 +49,33 @@ export default function LeaderboardPage() {
 
   return (
     <main className="safe-top mx-auto max-w-md px-4 pb-28">
-      <header className="flex items-end justify-between py-3">
-        <div>
-          <h1 className="text-2xl font-bold text-brand-900">กระดานอันดับ</h1>
-          {data && (
-            <p className="text-sm text-gray-600">
-              สัปดาห์นี้ {thaiDate(data.weekStart)} – {thaiDate(data.weekEnd)} · {data.totalPlayers} คน
-            </p>
-          )}
+      <PageHeader
+        title="กระดานอันดับ"
+        subtitle={
+          data
+            ? `สัปดาห์นี้ ${thaiDate(data.weekStart)} – ${thaiDate(data.weekEnd)} · ${data.totalPlayers} คน`
+            : "อันดับประจำสัปดาห์"
+        }
+        action={
+          <button
+            onClick={() => void load()}
+            disabled={loading}
+            aria-label="โหลดอันดับใหม่"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-lg text-brand-800 shadow-sm ring-1 ring-brand-100 disabled:opacity-50"
+          >
+            <span className={loading ? "animate-spin" : ""} aria-hidden>
+              ↻
+            </span>
+          </button>
+        }
+      />
+
+      {!data && loading && (
+        <div className="flex flex-col items-center gap-3 p-10 text-gray-600">
+          <span className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" aria-hidden />
+          กำลังโหลดอันดับ…
         </div>
-        <button
-          onClick={() => void load()}
-          disabled={loading}
-          className="rounded-full bg-white px-3 py-1.5 text-sm font-medium text-brand-800 ring-1 ring-brand-200 disabled:opacity-50"
-        >
-          {loading ? "กำลังโหลด…" : "รีเฟรช"}
-        </button>
-      </header>
+      )}
 
       {data && <MyCard data={data} />}
 

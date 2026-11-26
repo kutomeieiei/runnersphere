@@ -69,6 +69,7 @@ export function GeoProvider({ children, active }: { children: React.ReactNode; a
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         freshInflight.current = false;
+        setStatus((s) => (s === "denied" ? s : "watching"));
         setFix((prev) =>
           prev && prev.timestamp >= pos.timestamp
             ? prev

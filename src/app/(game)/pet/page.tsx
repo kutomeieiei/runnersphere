@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CoinBadge } from "@/components/game/CoinBadge";
+import { PageHeader } from "@/components/game/PageHeader";
 import { MeGate } from "@/components/game/MeGate";
 import { AccessoryIcon } from "@/components/pet/Accessories";
 import { PetAvatar } from "@/components/pet/PetAvatar";
 import { StatBar } from "@/components/pet/StatBar";
 import { useGame } from "@/components/providers/GameProvider";
 import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import {
   ACCESSORIES,
   FOODS,
@@ -37,6 +39,8 @@ export default function PetPage() {
   const [message, setMessage] = useState<Message>(null);
   const [floaters, setFloaters] = useState<{ id: number; text: string }[]>([]);
   const [cheering, setCheering] = useState(false);
+  // ยืนยันก่อนใช้เหรียญซื้อของแต่งตัว (Nielsen #5 Error prevention, #3 User control)
+  const [confirmBuy, setConfirmBuy] = useState<Accessory | null>(null);
   const floaterId = useRef(0);
 
   if (!me) {
@@ -104,10 +108,7 @@ export default function PetPage() {
 
   return (
     <main className="safe-top mx-auto max-w-md px-4 pb-28">
-      <header className="flex items-center justify-between py-3">
-        <h1 className="text-2xl font-bold text-brand-900">สัตว์เลี้ยงของฉัน</h1>
-        <CoinBadge coins={profile.coins} />
-      </header>
+      <PageHeader title="สัตว์เลี้ยงของฉัน" subtitle="ให้อาหาร แต่งตัว และเลือกตัวที่ออกเดินด้วย" />
 
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-sky-100 to-brand-50 p-4 ring-1 ring-brand-100">
         <div className="flex items-baseline justify-between">
@@ -178,7 +179,7 @@ export default function PetPage() {
             inventory={me.inventory}
             equipped={pet.equipped ?? {}}
             busy={busy}
-            onBuy={(a) => onAccessory({ action: "buy", accessoryId: a.id }, a.id, `ได้ ${a.name} แล้ว! ✨`)}
+            onBuy={(a) => setConfirmBuy(a)}
             onEquip={(a) => onAccessory({ action: "equip", accessoryId: a.id }, a.id, "เข้ากันมาก! ✨")}
             onUnequip={(slot, id) => onAccessory({ action: "unequip", slot }, id)}
           />
@@ -193,6 +194,43 @@ export default function PetPage() {
           />
         )}
       </section>
+      <Modal open={Boolean(confirmBuy)} title="ยืนยันการซื้อ" onClose={() => setConfirmBuy(null)}>
+        {confirmBuy && (
+          <>
+            <div className="flex items-center gap-3">
+              <AccessoryIcon id={confirmBuy.id} size={64} />
+              <div>
+                <p className="font-semibold text-gray-900">{confirmBuy.name}</p>
+                <p className="text-sm text-gray-600">ซื้อครั้งเดียว ใส่ได้ทุกตัว ถอดหรือเปลี่ยนได้ตลอด</p>
+              </div>
+            </div>
+            <dl className="mt-4 space-y-1 rounded-2xl bg-amber-50 p-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-gray-600">ราคา</dt>
+                <dd className="font-semibold tabular-nums">🪙 {confirmBuy.price}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-600">เหลือหลังซื้อ</dt>
+                <dd className="font-semibold tabular-nums">🪙 {profile.coins - confirmBuy.price}</dd>
+              </div>
+            </dl>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => setConfirmBuy(null)}>
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={() => {
+                  const item = confirmBuy;
+                  setConfirmBuy(null);
+                  void onAccessory({ action: "buy", accessoryId: item.id }, item.id, `ได้ ${item.name} แล้ว! ✨`);
+                }}
+              >
+                ซื้อเลย
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </main>
   );
 }

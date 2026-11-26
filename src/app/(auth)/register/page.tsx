@@ -89,6 +89,7 @@ export default function RegisterPage() {
           name="nickname"
           autoComplete="nickname"
           maxLength={GAME_CONFIG.profile.nicknameMaxLength}
+          showCount
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           error={errors.nickname}

@@ -12,7 +12,7 @@ import { DirectionArrow } from "./DirectionArrow";
 export function MissionPanel() {
   const game = useGame();
   const geo = useGeo();
-  const { me, starting, actionError, lastCheck } = game;
+  const { me, starting, actionError, lastCheck, lastCheckAt } = game;
   const mission = me?.activeMission ?? null;
   const fix = geo.fix;
   const [now, setNow] = useState(() => Date.now());
@@ -30,8 +30,13 @@ export function MissionPanel() {
 
   if (!mission) {
     const inside = fix ? pointInPolygon(fix, GEOFENCE.polygon) : false;
-    const canStart =
-      Boolean(fix) && inside && geo.accuracyLevel !== "approximate" && !capReached && geo.status === "watching";
+    // บอกเหตุผลเสมอเมื่อกดเริ่มไม่ได้ (Nielsen #1, #5, #9) แทนปุ่มสีจางที่ไม่รู้ว่าทำไม
+    let blockedReason: string | null = null;
+    if (geo.status === "denied") blockedReason = "ต้องอนุญาตให้ใช้ตำแหน่งก่อน (ดูวิธีด้านบน)";
+    else if (!fix || geo.status !== "watching") blockedReason = "กำลังรอสัญญาณ GPS… ออกไปที่โล่งจะเร็วขึ้น";
+    else if (!inside) blockedReason = "ต้องอยู่ในเขตโรงเรียน (กรอบสีส้มบนแผนที่) ก่อนจึงจะเริ่มได้";
+    else if (geo.accuracyLevel === "approximate") blockedReason = "เปิด \"ตำแหน่งที่แม่นยำ\" ในเครื่องก่อน";
+    const canStart = !blockedReason && !capReached;
     return (
       <Card>
         <div className="flex items-center justify-between">
@@ -50,9 +55,22 @@ export function MissionPanel() {
             วันนี้ครบ {GAME_CONFIG.health.dailySpotCap} จุดแล้ว เก่งมาก! พักผ่อน ดื่มน้ำ แล้วเจอกันพรุ่งนี้ 💧
           </Alert>
         ) : (
-          <Button className="mt-3 w-full text-lg" onClick={() => void game.startMission()} loading={starting} disabled={!canStart}>
-            🎯 สุ่มจุดภารกิจ
-          </Button>
+          <>
+            <Button
+              className="mt-3 w-full text-lg"
+              onClick={() => void game.startMission()}
+              loading={starting}
+              disabled={!canStart}
+              aria-describedby={blockedReason ? "start-blocked-reason" : undefined}
+            >
+              🎯 สุ่มจุดภารกิจ
+            </Button>
+            {blockedReason && (
+              <p id="start-blocked-reason" className="mt-2 text-center text-sm text-gray-600">
+                {blockedReason}
+              </p>
+            )}
+          </>
         )}
         {actionError && (
           <Alert tone="error" className="mt-3">
@@ -67,6 +85,9 @@ export function MissionPanel() {
   const bearing = fix ? bearingDeg(fix, mission.target) : 0;
   const minutesLeft = Math.max(0, Math.ceil((mission.expiresAt - now) / 60_000));
   const inRadius = distance != null && distance <= mission.radiusM;
+  // เวลาเดินโดยประมาณ (เดินปกติ ~1.2 ม./วินาที) — สื่อด้วยหน่วยที่เด็กเข้าใจง่าย (Nielsen #2)
+  const walkMinutes = distance != null ? Math.max(1, Math.round(Math.max(0, distance - mission.radiusM) / 1.2 / 60)) : null;
+  const secondsSinceCheck = lastCheckAt ? Math.max(0, Math.round((now - lastCheckAt) / 1000)) : null;
 
   let hint: { tone: "info" | "warning" | "success"; text: string } | null = null;
   switch (lastCheck?.outcome) {
@@ -99,6 +120,7 @@ export function MissionPanel() {
             {distance != null ? (
               <>
                 อีก <b>{formatDistance(distance)}</b> ไป{bearingToThai(bearing)}
+                {!inRadius && walkMinutes != null && <span className="text-gray-500"> · เดินราว {walkMinutes} นาที</span>}
               </>
             ) : (
               "รอตำแหน่ง…"
@@ -108,17 +130,27 @@ export function MissionPanel() {
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-        <div className="flex items-center gap-1" aria-label={`ยืนยันแล้ว ${mission.consecutive} จาก ${mission.required}`}>
-          {Array.from({ length: mission.required }).map((_, i) => (
-            <span
-              key={i}
-              className={`h-2.5 w-6 rounded-full ${i < mission.consecutive ? "bg-brand-500" : "bg-gray-200"}`}
-            />
-          ))}
+      <div className="mt-3 flex items-center justify-between gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1" aria-hidden>
+            {Array.from({ length: mission.required }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-2.5 w-5 rounded-full ${i < mission.consecutive ? "bg-brand-500" : "bg-gray-200"}`}
+              />
+            ))}
+          </div>
+          <span>
+            ยืนยันตำแหน่ง {mission.consecutive}/{mission.required}
+          </span>
         </div>
-        <span>เหลือเวลา {minutesLeft} นาที</span>
+        <span>เหลือ {minutesLeft} นาที</span>
       </div>
+      <p className="mt-1 text-[11px] text-gray-400">
+        {secondsSinceCheck == null
+          ? "ระบบจะตรวจตำแหน่งให้อัตโนมัติเมื่อเข้าใกล้จุด"
+          : `ตรวจตำแหน่งล่าสุด ${secondsSinceCheck < 5 ? "เมื่อครู่" : `${secondsSinceCheck} วินาทีที่แล้ว`}`}
+      </p>
 
       {hint && (
         <Alert tone={hint.tone} className="mt-3">

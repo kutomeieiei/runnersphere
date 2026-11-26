@@ -2,3 +2,4 @@
 export const PENDING_NICKNAME_KEY = "movemai.pendingNickname";
 export const SAFETY_ACK_KEY = "movemai.safetyAck";
 export const MOCK_GPS_KEY = "movemai.mockGps";
+export const HELP_SEEN_KEY = "movemai.helpSeen";

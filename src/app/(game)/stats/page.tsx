@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MeGate } from "@/components/game/MeGate";
+import { PageHeader } from "@/components/game/PageHeader";
 import { WeekChart } from "@/components/game/WeekChart";
 import { useGame } from "@/components/providers/GameProvider";
 import { Alert } from "@/components/ui/Alert";
@@ -39,7 +40,7 @@ export default function StatsPage() {
 
   return (
     <main className="safe-top mx-auto max-w-md px-4 pb-28">
-      <h1 className="py-3 text-2xl font-bold text-brand-900">สถิติสุขภาพ</h1>
+      <PageHeader title="สถิติสุขภาพ" subtitle="ดูว่าเดินไปมากแค่ไหนแล้ว" />
 
       <section className="grid grid-cols-3 gap-2">
         <Tile label="ระยะรวม" value={formatDistance(totals.distanceM)} />

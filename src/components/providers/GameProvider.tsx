@@ -31,6 +31,8 @@ type GameContextValue = {
   actionError: ApiClientError | null;
   clearActionError: () => void;
   lastCheck: CheckResponse | null;
+  /** เวลาที่ server ตรวจตำแหน่งล่าสุด (ms) — ใช้แสดงสถานะให้ผู้เล่นเห็นว่าระบบกำลังทำงาน */
+  lastCheckAt: number | null;
   reward: Reward | null;
   dismissReward: () => void;
   /** ข้อความสั้นๆ เมื่อภารกิจจบโดยไม่ได้รางวัล (หมดเวลา / ถูกจับความเร็ว) */
@@ -53,6 +55,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [starting, setStarting] = useState(false);
   const [actionError, setActionError] = useState<ApiClientError | null>(null);
   const [lastCheck, setLastCheck] = useState<CheckResponse | null>(null);
+  const [lastCheckAt, setLastCheckAt] = useState<number | null>(null);
   const [reward, setReward] = useState<Reward | null>(null);
   const [missionNotice, setMissionNotice] = useState<string | null>(null);
 
@@ -202,6 +205,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     })
       .then((res) => {
         setLastCheck(res);
+        setLastCheckAt(Date.now());
         if (res.outcome === "rate_limited" && res.retryAfterMs) {
           holdUntil.current = Date.now() + res.retryAfterMs;
         }
@@ -260,6 +264,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       actionError,
       clearActionError: () => setActionError(null),
       lastCheck,
+      lastCheckAt,
       reward,
       dismissReward: () => setReward(null),
       missionNotice,
@@ -279,6 +284,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       starting,
       actionError,
       lastCheck,
+      lastCheckAt,
       reward,
       missionNotice,
     ],

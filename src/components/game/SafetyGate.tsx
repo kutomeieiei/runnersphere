@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useGeo } from "@/components/providers/GeoProvider";
+import { useShell } from "./GameShell";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { dateKey } from "@/lib/time";
@@ -29,6 +30,7 @@ export function SafetyGate() {
   // component นี้ render เฉพาะฝั่ง client (หลังโหลดสถานะล็อกอิน) จึงอ่าน localStorage ตอนเริ่มได้
   const [open, setOpen] = useState(() => !ackedToday());
   const { start } = geo;
+  const { showHelpIfFirstTime } = useShell();
 
   useEffect(() => {
     if (!open) start();
@@ -39,6 +41,7 @@ export function SafetyGate() {
       localStorage.setItem(SAFETY_ACK_KEY, dateKey(Date.now()));
     } catch {}
     setOpen(false);
+    showHelpIfFirstTime();
   }
 
   return (

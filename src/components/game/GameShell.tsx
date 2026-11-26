@@ -6,14 +6,29 @@ import { GameMap } from "@/components/map/GameMap";
 import { useGame } from "@/components/providers/GameProvider";
 import { useGeo } from "@/components/providers/GeoProvider";
 import { mockGps } from "@/lib/mock-gps";
+import { HELP_SEEN_KEY } from "@/lib/storage-keys";
 import { BottomNav } from "./BottomNav";
+import { HelpModal } from "./HelpModal";
 import { OfflineBanner } from "./OfflineBanner";
 import { ProfileSetup } from "./ProfileSetup";
 import { RewardModal } from "./RewardModal";
 import { SafetyGate } from "./SafetyGate";
 
-type ShellContextValue = { recenter: () => void };
-const ShellContext = createContext<ShellContextValue>({ recenter: () => undefined });
+type ShellContextValue = {
+  recenter: () => void;
+  helpOpen: boolean;
+  openHelp: () => void;
+  closeHelp: () => void;
+  /** เปิดวิธีเล่นอัตโนมัติครั้งแรกที่เข้าเกม */
+  showHelpIfFirstTime: () => void;
+};
+const ShellContext = createContext<ShellContextValue>({
+  recenter: () => undefined,
+  helpOpen: false,
+  openHelp: () => undefined,
+  closeHelp: () => undefined,
+  showHelpIfFirstTime: () => undefined,
+});
 export const useShell = () => useContext(ShellContext);
 
 export function GameShell({ children }: { children: React.ReactNode }) {
@@ -23,7 +38,25 @@ export function GameShell({ children }: { children: React.ReactNode }) {
   const { me } = useGame();
   const [recenterSignal, setRecenterSignal] = useState(0);
   const recenter = useCallback(() => setRecenterSignal((n) => n + 1), []);
-  const shell = useMemo(() => ({ recenter }), [recenter]);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  const closeHelp = useCallback(() => {
+    setHelpOpen(false);
+    try {
+      localStorage.setItem(HELP_SEEN_KEY, "1");
+    } catch {}
+  }, []);
+  const showHelpIfFirstTime = useCallback(() => {
+    let seen = false;
+    try {
+      seen = localStorage.getItem(HELP_SEEN_KEY) === "1";
+    } catch {}
+    if (!seen) setHelpOpen(true);
+  }, []);
+  const shell = useMemo(
+    () => ({ recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime }),
+    [recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime],
+  );
 
   const mission = me?.activeMission ?? null;
   const player = geo.fix ? { lat: geo.fix.lat, lng: geo.fix.lng, accuracy: geo.fix.accuracy } : null;
@@ -53,6 +86,7 @@ export function GameShell({ children }: { children: React.ReactNode }) {
 
       <BottomNav />
       <SafetyGate />
+      <HelpModal />
       <ProfileSetup />
       <RewardModal />
     </ShellContext.Provider>

@@ -1,6 +1,8 @@
 "use client";
 
 import { CoinBadge } from "@/components/game/CoinBadge";
+import { GpsChip } from "@/components/game/GpsChip";
+import { HelpButton } from "@/components/game/HelpModal";
 import { useShell } from "@/components/game/GameShell";
 import { LocationStatus } from "@/components/game/LocationStatus";
 import { MissionPanel } from "@/components/game/MissionPanel";
@@ -23,13 +25,12 @@ export default function PlayPage() {
             <p className="truncate text-sm font-semibold text-brand-900">
               {me ? `สวัสดี ${me.profile.nickname} 👋` : loading ? "กำลังโหลด…" : "Movemai"}
             </p>
-            {geo.fix && (
-              <p className="text-xs text-gray-500">
-                GPS ±{Math.round(geo.fix.accuracy)} ม.{geo.fix.source === "mock" && " (จำลอง)"}
-              </p>
-            )}
+            <GpsChip />
           </div>
-          {me && <CoinBadge coins={me.profile.coins} />}
+          <div className="flex shrink-0 items-center gap-2">
+            {me && <CoinBadge coins={me.profile.coins} />}
+            <HelpButton />
+          </div>
         </div>
         <div className="pointer-events-auto">
           <LocationStatus />
