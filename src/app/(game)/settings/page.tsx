@@ -12,11 +12,8 @@ import { useGame } from "@/components/providers/GameProvider";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
-import { Modal } from "@/components/ui/Modal";
 import { GAME_CONFIG } from "@/config/game";
 import { api, ApiClientError } from "@/lib/api-client";
-
-const CONFIRM_WORD = "ลบบัญชี";
 
 export default function SettingsPage() {
   const { me } = useGame();
@@ -33,9 +30,6 @@ function SettingsContent() {
   const [nickname, setNickname] = useState(me?.profile.nickname ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
-  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function saveNickname(e: React.FormEvent) {
@@ -63,18 +57,6 @@ function SettingsContent() {
       setError(err instanceof ApiClientError ? err.message : "บันทึกไม่สำเร็จ");
     } finally {
       setBoardBusy(false);
-    }
-  }
-
-  async function deleteAccount() {
-    setDeleting(true);
-    setError(null);
-    try {
-      await api("/api/account", { method: "DELETE" });
-      await signOut("deleted");
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "ลบบัญชีไม่สำเร็จ");
-      setDeleting(false);
     }
   }
 
@@ -161,31 +143,9 @@ function SettingsContent() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <div className="space-y-3">
-        <Button variant="secondary" className="w-full" onClick={() => void signOut()}>
-          ออกจากระบบ
-        </Button>
-        <Button variant="ghost" className="w-full text-red-600" onClick={() => setDeleteOpen(true)}>
-          ลบบัญชีและข้อมูลทั้งหมด
-        </Button>
-      </div>
-
-      <Modal open={deleteOpen} title="ลบบัญชี?" onClose={() => !deleting && setDeleteOpen(false)}>
-        <p className="text-sm text-gray-700">
-          บัญชี เหรียญ สัตว์เลี้ยง และสถิติทั้งหมดจะถูกลบถาวร กู้คืนไม่ได้ พิมพ์คำว่า <b>{CONFIRM_WORD}</b> เพื่อยืนยัน
-        </p>
-        <div className="mt-3">
-          <Field label="พิมพ์เพื่อยืนยัน" name="confirm" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={() => setDeleteOpen(false)} disabled={deleting}>
-            ยกเลิก
-          </Button>
-          <Button variant="danger" onClick={() => void deleteAccount()} loading={deleting} disabled={confirmText.trim() !== CONFIRM_WORD}>
-            ลบถาวร
-          </Button>
-        </div>
-      </Modal>
+      <Button variant="secondary" className="w-full" onClick={() => void signOut()}>
+        ออกจากระบบ
+      </Button>
     </main>
   );
 }
