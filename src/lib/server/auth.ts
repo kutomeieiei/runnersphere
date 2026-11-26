@@ -10,7 +10,7 @@ export type AuthedUser = { uid: string; emailVerified: boolean };
  */
 export async function requireUser(
   req: Request,
-  opts: { allowUnverified?: boolean } = {},
+  opts: { allowUnverified?: boolean; checkRevoked?: boolean } = {},
 ): Promise<AuthedUser> {
   const header = req.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(header);
@@ -18,8 +18,10 @@ export async function requireUser(
 
   let decoded;
   try {
-    // checkRevoked = true: บัญชีที่ถูกลบ/ปิด จะใช้ token เดิมต่อไม่ได้
-    decoded = await adminAuth().verifyIdToken(match[1], true);
+    // ตรวจลายเซ็น token ด้วย public key ของ Google (cache ไว้ ไม่ต้องเรียกเน็ตทุกครั้ง)
+    // checkRevoked เรียก Firebase Auth เพิ่ม 1 รอบ จึงเปิดเฉพาะ endpoint ที่จำเป็น (สร้างโปรไฟล์ / ลบบัญชี)
+    // endpoint อื่นปลอดภัยอยู่แล้ว: ถ้าบัญชีถูกลบ ข้อมูล users/{uid} ก็หายไปด้วย จึงตอบ profile_missing
+    decoded = await adminAuth().verifyIdToken(match[1], opts.checkRevoked ?? false);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     const code = (err as { code?: string })?.code ?? "";

@@ -42,7 +42,12 @@ let dbInstance: FirebaseFirestore.Firestore | null = null;
 export function db() {
   if (!dbInstance) {
     dbInstance = getFirestore(adminApp());
-    dbInstance.settings({ ignoreUndefinedProperties: true });
+    // preferRest: ใช้ HTTP แทน gRPC — เริ่มทำงานเร็วกว่ามากบน serverless (Vercel) ตอน cold start
+    // (ปิดเมื่อใช้ Firestore Emulator เพราะโหมด REST ต้องการ credential จริง)
+    dbInstance.settings({
+      ignoreUndefinedProperties: true,
+      preferRest: !process.env.FIRESTORE_EMULATOR_HOST,
+    });
   }
   return dbInstance;
 }

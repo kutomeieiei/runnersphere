@@ -4,7 +4,7 @@ import { json, route } from "@/lib/server/http";
 
 /** ลบบัญชีและข้อมูลทั้งหมดของผู้ใช้ */
 export const DELETE = route(async (req) => {
-  const user = await requireUser(req, { allowUnverified: true });
+  const user = await requireUser(req, { allowUnverified: true, checkRevoked: true });
   await deleteAccount(user.uid);
   return json({ deleted: true });
 });

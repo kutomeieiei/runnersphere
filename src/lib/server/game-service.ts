@@ -232,15 +232,16 @@ export async function upsertProfile(uid: string, nicknameRaw: unknown): Promise<
 
 export async function getMe(uid: string): Promise<MeResponse> {
   const now = Date.now();
-  const snap = await userRef(uid).get();
+  const keys = lastNDateKeys(now, 7);
+  // อ่านพร้อมกันในรอบเดียว (ลดจำนวนรอบที่ต้องคุยกับ Firestore)
+  const [snap, petsSnap, dailySnaps] = await Promise.all([
+    userRef(uid).get(),
+    petsCol(uid).get(),
+    db().getAll(...keys.map((k) => dailyRef(uid, k))),
+  ]);
   if (!snap.exists) throw new ApiError(404, "profile_missing");
   const user = snap.data() as UserDoc;
-
-  const keys = lastNDateKeys(now, 7);
-  const [petsSnap, [missionSnap, ...dailySnaps]] = await Promise.all([
-    petsCol(uid).get(),
-    db().getAll(missionsCol(uid).doc(user.activeMissionId ?? "_none"), ...keys.map((k) => dailyRef(uid, k))),
-  ]);
+  const missionSnap = user.activeMissionId ? await missionsCol(uid).doc(user.activeMissionId).get() : null;
 
   const pets = petsSnap.docs.map((d) => ({ id: d.id, data: d.data() as PetDoc }));
   const activeDoc = pets.find((p) => p.id === user.activePetId);
@@ -251,7 +252,7 @@ export async function getMe(uid: string): Promise<MeResponse> {
   const pet = applyDecay(petRaw, now);
 
   let activeMission: PublicMission | null = null;
-  if (missionSnap.exists) {
+  if (missionSnap?.exists) {
     const m = missionSnap.data() as MissionDoc;
     if (m.status === "active" && m.expiresAt > now) activeMission = toPublicMission(missionSnap.id, m);
   }
@@ -280,15 +281,17 @@ export async function getMe(uid: string): Promise<MeResponse> {
 
 export async function getStats(uid: string): Promise<StatsResponse> {
   const now = Date.now();
-  const snap = await userRef(uid).get();
+  const keys = lastNDateKeys(now, 28);
+  const [snap, dailySnaps, recentSnap] = await Promise.all([
+    userRef(uid).get(),
+    db().getAll(...keys.map((k) => dailyRef(uid, k))),
+    missionsCol(uid).orderBy("startedAt", "desc").limit(10).get(),
+  ]);
   if (!snap.exists) throw new ApiError(404, "profile_missing");
   const user = snap.data() as UserDoc;
-  const keys = lastNDateKeys(now, 28);
-  const dailySnaps = await db().getAll(...keys.map((k) => dailyRef(uid, k)));
   const days = dailySnaps.map((s, i) =>
     s.exists ? { ...emptyDaily(keys[i]), ...(s.data() as DailyStats) } : emptyDaily(keys[i]),
   );
-  const recentSnap = await missionsCol(uid).orderBy("startedAt", "desc").limit(10).get();
   const recent: MissionHistoryItem[] = recentSnap.docs.map((d) => {
     const m = d.data() as MissionDoc;
     return {
@@ -581,17 +584,18 @@ export async function getLeaderboard(uid: string): Promise<LeaderboardResponse> 
   requireLeaderboard();
   const now = Date.now();
   const week = weekStartKey(now);
-  const userSnap = await userRef(uid).get();
-  if (!userSnap.exists) throw new ApiError(404, "profile_missing");
-  const user = userSnap.data() as UserDoc;
   const col = entriesCol(week);
   const topN = GAME_CONFIG.leaderboard.topN;
 
   // ดึงเผื่อไว้มากกว่า topN เพื่อให้เรียงคะแนนเท่ากันได้ถูก (ใช้ index ช่องเดียว ไม่ต้องสร้าง composite index)
-  const [topSnap, totalAgg] = await Promise.all([
+  const [userSnap, topSnap, totalAgg, mine] = await Promise.all([
+    userRef(uid).get(),
     col.orderBy("spots", "desc").limit(topN * 2 + 10).get(),
     col.where("spots", ">", 0).count().get(),
+    entryRef(week, uid).get(),
   ]);
+  if (!userSnap.exists) throw new ApiError(404, "profile_missing");
+  const user = userSnap.data() as UserDoc;
   const entries: LeaderboardEntry[] = topSnap.docs.map((d) => ({ id: d.id, ...(d.data() as EntryDoc) }));
   const top = rankEntries(entries)
     .slice(0, topN)
@@ -606,7 +610,6 @@ export async function getLeaderboard(uid: string): Promise<LeaderboardResponse> 
   const visible = isVisible(user);
   let me: LeaderboardResponse["me"];
   if (visible) {
-    const mine = await entryRef(week, uid).get();
     const data = mine.exists ? (mine.data() as EntryDoc) : null;
     let rank: number | null = null;
     if (data && data.spots > 0) {

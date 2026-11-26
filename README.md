@@ -164,6 +164,8 @@ npm run dev
 3. **Environment Variables** → ใส่ทุกตัวในตารางด้านบน (Production และ Preview)
    - `FIREBASE_PRIVATE_KEY`: วางทั้งก้อนตั้งแต่ `-----BEGIN PRIVATE KEY-----` ถึง `-----END PRIVATE KEY-----\n` (แบบมี `\n` ก็ได้)
 4. **Deploy** → ได้โดเมน `https://<your-app>.vercel.app`
+   - `vercel.json` ตั้งให้ server รันที่ **สิงคโปร์ (`sin1`)** ใกล้ผู้เล่นในไทยและใกล้ Firestore `asia-southeast1`
+     ถ้าคุณสร้าง Firestore ไว้ที่ภูมิภาคอื่น ให้เปลี่ยน `regions` ใน `vercel.json` ให้ใกล้ Firestore แทน (ไม่งั้นทุกคำขอจะช้า)
 5. นำโดเมนไปใส่ใน **Firebase Authorized domains** (ข้อ 5) และ **HTTP referrers ของ Maps key** (ข้อ 2)
 
 ## 5. ตั้ง Authorized domains ใน Firebase

@@ -196,7 +196,9 @@ ok(r.body.pet.speciesId === "puifai" && r.body.pet.level === 3 && r.body.pet.equ
 r = await call(a.token, "/api/account", "DELETE");
 ok(r.status === 200, "account deleted", r);
 r = await call(a.token, "/api/me");
-ok(r.status === 401, "token unusable after deletion", r);
+ok(r.status === 404 || r.status === 401, "deleted account has no data", r);
+r = await call(a.token, "/api/profile", "POST", { nickname: "ผี" });
+ok(r.status === 401, "deleted account cannot recreate a profile", r);
 const left = await fetch(`${FS}/users/${a.uid}/missions`, { headers: { authorization: "Bearer owner" } }).then((x) => x.json());
 ok(!left.documents || left.documents.length === 0, "user data removed", left);
 r = await call(b.token, "/api/leaderboard");
