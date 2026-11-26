@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MeGate } from "@/components/game/MeGate";
 import { WeekChart } from "@/components/game/WeekChart";
 import { useGame } from "@/components/providers/GameProvider";
 import { Alert } from "@/components/ui/Alert";
@@ -28,7 +29,7 @@ export default function StatsPage() {
       .catch((err) => setError(err instanceof ApiClientError ? err.message : "โหลดสถิติไม่สำเร็จ"));
   }, [me?.profile.totals.spots]);
 
-  if (!me) return <div className="p-6 text-center text-gray-500">กำลังโหลด…</div>;
+  if (!me) return <MeGate />;
   const totals = me.profile.totals;
   const week = me.week;
   const weekSpots = week.reduce((s, d) => s + d.spots, 0);

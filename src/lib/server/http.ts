@@ -26,7 +26,27 @@ export function errorResponse(err: unknown): Response {
     );
   }
   console.error("[api] unexpected error", err);
-  return json({ error: { code: "internal", message: messageFor("internal") } }, 500);
+  const code = classifyServerError(err);
+  return json({ error: { code, message: messageFor(code) } }, code === "internal" ? 500 : 503);
+}
+
+/**
+ * แปลง error จาก Firebase Admin ที่เกิดจากการตั้งค่าผิด ให้เป็นรหัสที่ผู้ดูแลเข้าใจได้
+ * (ไม่ส่งข้อความดิบกลับไป เพื่อไม่ให้รายละเอียดภายในหลุดออกไป)
+ */
+export function classifyServerError(err: unknown): ApiErrorCode {
+  const e = err as { code?: unknown; message?: unknown } | null;
+  const msg = String(e?.message ?? "");
+  const code = e?.code;
+  if (
+    /default credentials|private key|PEM|invalid_grant|Invalid JWT|DECODER routines|invalid-credential|unauthenticated/i.test(msg) ||
+    code === 16
+  ) {
+    return "server_credentials";
+  }
+  if ((code === 5 || /NOT_FOUND/.test(msg)) && /database/i.test(msg)) return "firestore_missing";
+  if (code === 7 || /PERMISSION_DENIED|permission/i.test(msg)) return "server_permission";
+  return "internal";
 }
 
 /** ห่อ route handler ให้คืน error เป็น JSON รูปแบบเดียวกันเสมอ */

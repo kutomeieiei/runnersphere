@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { CoinBadge } from "@/components/game/CoinBadge";
+import { MeGate } from "@/components/game/MeGate";
 import { AccessoryIcon } from "@/components/pet/Accessories";
 import { PetAvatar } from "@/components/pet/PetAvatar";
 import { StatBar } from "@/components/pet/StatBar";
@@ -39,7 +40,7 @@ export default function PetPage() {
   const floaterId = useRef(0);
 
   if (!me) {
-    return <div className="p-6 text-center text-gray-500">กำลังโหลด…</div>;
+    return <MeGate />;
   }
   const { pet, profile } = me;
   const species = PET_SPECIES[pet.speciesId];

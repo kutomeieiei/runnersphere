@@ -28,6 +28,10 @@ export type ApiErrorCode =
   | "already_owned"
   | "rate_limited"
   | "server_misconfigured"
+  | "server_credentials"
+  | "firestore_missing"
+  | "server_permission"
+  | "timeout"
   | "offline"
   | "internal";
 
@@ -62,6 +66,12 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   already_owned: "คุณมีของชิ้นนี้แล้ว",
   rate_limited: "ส่งคำขอถี่เกินไป รอสักครู่",
   server_misconfigured: "ระบบยังตั้งค่าไม่ครบ (ผู้ดูแลต้องใส่ค่า environment ของ Firebase)",
+  server_credentials:
+    "กุญแจของ server ใช้ไม่ได้ (ผู้ดูแลต้องตรวจ FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY ใน Vercel แล้ว Redeploy)",
+  firestore_missing: "ยังไม่ได้สร้าง Firestore Database ในโปรเจกต์ Firebase (ผู้ดูแลต้องสร้างก่อน)",
+  server_permission:
+    "server ไม่มีสิทธิ์เข้าถึงฐานข้อมูล (ตรวจว่า FIREBASE_PROJECT_ID และกุญแจมาจากโปรเจกต์เดียวกัน)",
+  timeout: "เซิร์ฟเวอร์ตอบช้าเกินไป ลองใหม่อีกครั้ง",
   offline: "ไม่มีอินเทอร์เน็ต กรุณาเชื่อมต่อแล้วลองใหม่",
   internal: "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง",
 };

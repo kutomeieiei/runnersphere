@@ -168,6 +168,18 @@ npm run dev
      ถ้าคุณสร้าง Firestore ไว้ที่ภูมิภาคอื่น ให้เปลี่ยน `regions` ใน `vercel.json` ให้ใกล้ Firestore แทน (ไม่งั้นทุกคำขอจะช้า)
 5. นำโดเมนไปใส่ใน **Firebase Authorized domains** (ข้อ 5) และ **HTTP referrers ของ Maps key** (ข้อ 2)
 
+### ตรวจการตั้งค่าหลัง deploy
+
+เปิด `https://<your-app>.vercel.app/api/health` ในเบราว์เซอร์ (ไม่ต้องล็อกอิน ไม่แสดงค่าของรหัสลับ):
+- `"ok": true` = พร้อมใช้งาน
+- `missingEnv` = ตัวแปรที่ยังไม่ได้ใส่ใน Vercel
+- `projectIdsMatch: false` = `FIREBASE_PROJECT_ID` กับ `NEXT_PUBLIC_FIREBASE_PROJECT_ID` มาจากคนละโปรเจกต์
+- `privateKeyLooksValid: false` = วาง `FIREBASE_PRIVATE_KEY` ไม่ครบ (ต้องมีตั้งแต่ `-----BEGIN` ถึง `-----END PRIVATE KEY-----`)
+- `firestore.problem` = `server_credentials` (กุญแจผิด) / `firestore_missing` (ยังไม่ได้สร้าง Firestore) / `server_permission` (กุญแจกับโปรเจกต์ไม่ตรงกัน)
+- `serverRegion` ควรเป็น `sin1`
+
+แก้ env แล้วต้อง **Redeploy** ทุกครั้ง
+
 ## 5. ตั้ง Authorized domains ใน Firebase
 
 Firebase console → **Authentication → Settings → Authorized domains** → **Add domain**:

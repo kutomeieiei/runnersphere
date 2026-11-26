@@ -86,8 +86,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }
         setNeedsProfile(true);
         setError(null);
-      } else if (err instanceof ApiClientError) {
-        setError(err);
+      } else {
+        setError(err instanceof ApiClientError ? err : new ApiClientError("internal", 0));
       }
     } finally {
       setLoading(false);

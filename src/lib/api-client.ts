@@ -4,6 +4,7 @@ import { messageFor, type ApiErrorCode } from "./errors";
 import { getFirebaseAuth } from "./firebase/client";
 
 export const SESSION_EXPIRED_EVENT = "movemai:session-expired";
+const REQUEST_TIMEOUT_MS = 20_000;
 
 export class ApiClientError extends Error {
   constructor(
@@ -39,9 +40,13 @@ export async function api<T>(
     throw new ApiClientError("session_expired", 401);
   }
 
+  // กันค้างไม่รู้จบ: ถ้า server ไม่ตอบภายในเวลาที่กำหนด ให้ถือว่าล้มเหลวและให้ผู้ใช้ลองใหม่
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(path, {
+      signal: controller.signal,
       method: opts.method ?? "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -51,8 +56,11 @@ export async function api<T>(
       cache: "no-store",
     });
   } catch {
+    clearTimeout(timer);
+    if (controller.signal.aborted) throw new ApiClientError("timeout", 0);
     throw new ApiClientError("offline", 0);
   }
+  clearTimeout(timer);
 
   const data = (await res.json().catch(() => null)) as
     | (T & { error?: { code?: ApiErrorCode } & Record<string, unknown> })
