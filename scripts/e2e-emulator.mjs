@@ -110,6 +110,15 @@ ok(r.body.cancelled === true, "mission cancelled", r.body);
 r = await call(a.token, "/api/stats");
 ok(r.status === 200 && r.body.recent.length === 2 && r.body.days.length === 28, "stats endpoint", r.body.recent);
 
+// play areas: server picks the area from the real position, not the client
+const agri = { lat: 16.456, lng: 102.81515 }; // กลาง "สวนเกษตร" (ค่าใน config)
+r = await call(b.token, "/api/missions/start", "POST", reading(agri));
+ok(r.status === 200 && r.body.mission.areaId === "kku-agri-park" && r.body.mission.spotId.startsWith("agri-"), "mission in agri area uses agri spots", r.body);
+await call(b.token, "/api/missions/cancel", "POST");
+await sleep(5200);
+r = await call(b.token, "/api/missions/start", "POST", reading({ lat: 16.4625, lng: 102.8155 })); // ระหว่างพื้นที่
+ok(r.status === 403 && r.body.error.code === "outside_geofence", "between areas → outside", r.body);
+
 // leaderboard
 r = await call(a.token, "/api/leaderboard");
 ok(r.status === 200 && r.body.top.length === 1 && r.body.top[0].nickname === "ต้นกล้า" && r.body.top[0].spots === 1 && r.body.top[0].isMe, "leaderboard shows A with 1 spot", r.body);

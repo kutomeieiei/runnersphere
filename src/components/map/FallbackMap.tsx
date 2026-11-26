@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { GEOFENCE, SPOTS, type LatLng } from "@/config/game";
-import { boundsOf, centerOf, pointInPolygon } from "@/lib/geo";
-import { MAP_BOUNDS, MAP_OVERLAY_PADDING, type MapMarkers } from "./mapConfig";
+import type { LatLng, PlayArea } from "@/config/game";
+import { boundsOf, centerOf } from "@/lib/geo";
+import { MAP_OVERLAY_PADDING, mapBoundsFor, playerModeFor, type MapMarkers } from "./mapConfig";
 
 const M_PER_DEG = 111_320;
 
@@ -13,9 +13,9 @@ const M_PER_DEG = 111_320;
  *
  * วาดด้วยหน่วย "พิกเซลจริงของจอ" เพื่อให้จุดผู้เล่น/ป้ายมีขนาดคงที่
  * และจัดเนื้อหาให้อยู่ในช่องที่ไม่ถูกแถบด้านบน/การ์ดด้านล่างบัง
- * ถ้าผู้เล่นอยู่นอกโรงเรียน จะซูมออกให้เห็นทั้งผู้เล่นและโรงเรียน
+ * แสดงเฉพาะพื้นที่ที่เลือก · ผู้เล่นอยู่นอกพื้นที่แต่ใกล้ (≤ 2 กม.) จะซูมให้เห็นทั้งคู่
  */
-export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { notice: string }) {
+export function FallbackMap({ area, player, target, onPick, notice }: MapMarkers & { notice: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 390, h: 844 });
 
@@ -29,13 +29,15 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
     return () => ro.disconnect();
   }, []);
 
-  const outside = Boolean(player && !pointInPolygon(player, GEOFENCE.polygon));
+  const mode = playerModeFor(area, player);
+  const outside = mode === "nearby" || mode === "far";
+  const showPlayer = mode === "inside" || mode === "nearby";
   // ปัดตำแหน่งเพื่อไม่ให้มุมกล้องกระตุกทุกครั้งที่ GPS ขยับเล็กน้อย
   const pLat = player ? Math.round(player.lat * 2000) / 2000 : 0;
   const pLng = player ? Math.round(player.lng * 2000) / 2000 : 0;
 
   const view = useMemo(() => {
-    const b = outside ? boundsOf([...GEOFENCE.polygon, { lat: pLat, lng: pLng }], 80) : MAP_BOUNDS;
+    const b = mode === "nearby" ? boundsOf([...area.polygon, { lat: pLat, lng: pLng }], 80) : mapBoundsFor(area);
     const lat0 = b.north;
     const lng0 = b.west;
     const kx = Math.cos((((b.north + b.south) / 2) * Math.PI) / 180);
@@ -60,7 +62,7 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
     // เส้นตารางทุก 100 ม. (หรือ 1 กม. ถ้าซูมออกไกล)
     const gridM = 100 * scale >= 16 ? 100 : 1000;
     return { toPx, toLatLng, scale, grid: gridM * scale, originX, originY };
-  }, [outside, pLat, pLng, size.w, size.h]);
+  }, [area, mode, pLat, pLng, size.w, size.h]);
 
   function onClick(e: React.MouseEvent<SVGSVGElement>) {
     if (!onPick) return;
@@ -68,11 +70,11 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
     onPick(view.toLatLng(e.clientX - rect.left, e.clientY - rect.top));
   }
 
-  const poly = GEOFENCE.polygon.map((p) => {
+  const poly = area.polygon.map((p) => {
     const { x, y } = view.toPx(p);
     return `${x},${y}`;
   });
-  const pp = player ? view.toPx(player) : null;
+  const pp = player && showPlayer ? view.toPx(player) : null;
   const tp = target ? view.toPx(target) : null;
   const gridOffsetX = view.originX % view.grid;
   const gridOffsetY = view.originY % view.grid;
@@ -103,7 +105,7 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
         <rect width={size.w} height={size.h} fill="url(#grid)" />
         <polygon points={poly.join(" ")} fill="#ff6b3514" stroke="#ff6b35" strokeWidth="2.5" strokeLinejoin="round" />
         {!outside &&
-          SPOTS.map((s) => {
+          area.spots.map((s) => {
             const { x, y } = view.toPx(s.position);
             return (
               <g key={s.id}>
@@ -114,7 +116,7 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
               </g>
             );
           })}
-        {outside && pp && <SchoolLabelAndLine view={view} player={pp} />}
+        {outside && <AreaLabelAndLine area={area} view={view} player={pp} />}
         {tp && target && (
           <g>
             <circle
@@ -150,30 +152,36 @@ export function FallbackMap({ player, target, onPick, notice }: MapMarkers & { n
         )}
       </svg>
       {/* มุมบนขวาใต้หัวหน้า: ไม่ทับการ์ดภารกิจ (ถ้ามีกล่องเตือนด้านบน กล่องเตือนจะทับป้ายนี้แทน) */}
-      <div className="pointer-events-none absolute right-3 top-[5.5rem] max-w-[55%] rounded-full bg-gray-900/60 px-2.5 py-0.5 text-[10px] text-white">
+      <div className="pointer-events-none absolute right-3 top-[8.75rem] max-w-[55%] rounded-full bg-gray-900/60 px-2.5 py-0.5 text-[10px] text-white">
         {notice}
       </div>
     </div>
   );
 }
 
-/** เส้นประจากผู้เล่นไปโรงเรียน + ป้าย "โรงเรียน" ใต้กรอบ (แสดงเมื่ออยู่นอกโรงเรียน) */
-function SchoolLabelAndLine({
+/** ป้ายชื่อพื้นที่ใต้กรอบ + เส้นประจากผู้เล่น (แสดงเมื่ออยู่นอกพื้นที่) */
+function AreaLabelAndLine({
+  area,
   view,
   player,
 }: {
+  area: PlayArea;
   view: { toPx: (p: LatLng) => { x: number; y: number } };
-  player: { x: number; y: number };
+  player: { x: number; y: number } | null;
 }) {
-  const c = view.toPx(centerOf(GEOFENCE.polygon));
-  const bottom = Math.max(...GEOFENCE.polygon.map((p) => view.toPx(p).y));
+  const c = view.toPx(centerOf(area.polygon));
+  const bottom = Math.max(...area.polygon.map((p) => view.toPx(p).y));
+  const label = `${area.icon} ${area.shortName}`;
+  const w = Math.max(60, label.length * 9);
   return (
     <g>
-      <line x1={player.x} y1={player.y} x2={c.x} y2={c.y} stroke="#0284c7" strokeWidth="2" strokeDasharray="6 6" opacity="0.6" />
+      {player && (
+        <line x1={player.x} y1={player.y} x2={c.x} y2={c.y} stroke="#0284c7" strokeWidth="2" strokeDasharray="6 6" opacity="0.6" />
+      )}
       <g transform={`translate(${c.x}, ${bottom + 16})`}>
-        <rect x="-30" y="-11" width="60" height="18" rx="9" fill="#ff6b35" />
+        <rect x={-w / 2} y="-11" width={w} height="18" rx="9" fill="#ff6b35" />
         <text y="3" fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle">
-          โรงเรียน
+          {label}
         </text>
       </g>
     </g>

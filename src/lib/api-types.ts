@@ -11,6 +11,8 @@ export type DailyStats = {
 
 export type PublicMission = {
   id: string;
+  /** พื้นที่เล่นของภารกิจ (null = ภารกิจเก่าก่อนมีหลายพื้นที่) */
+  areaId: string | null;
   spotId: string;
   spotName: string;
   spotHint?: string | null;

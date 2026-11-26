@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useGame } from "@/components/providers/GameProvider";
 import { useGeo } from "@/components/providers/GeoProvider";
-import { GEOFENCE, SPOTS } from "@/config/game";
-import { centerOf, offsetM } from "@/lib/geo";
+import { areaCenter } from "@/lib/areas";
+import { useShell } from "./GameShell";
+import { offsetM } from "@/lib/geo";
 import { MOCK_GPS_AVAILABLE, mockGps, type MockMode } from "@/lib/mock-gps";
 
 /**
@@ -17,11 +18,12 @@ import { MOCK_GPS_AVAILABLE, mockGps, type MockMode } from "@/lib/mock-gps";
 export function MockGpsPanel() {
   const { mock } = useGeo();
   const { me } = useGame();
+  const { area } = useShell();
   const [open, setOpen] = useState(false);
   if (!MOCK_GPS_AVAILABLE) return null;
 
   const target = me?.activeMission?.target ?? null;
-  const center = centerOf(GEOFENCE.polygon);
+  const center = areaCenter(area);
 
   return (
     <div className="pointer-events-auto">
@@ -55,13 +57,13 @@ export function MockGpsPanel() {
                 <MockBtn onClick={() => target && mockGps.set({ position: target, walkTarget: null })} disabled={!target}>
                   ⚡ วาร์ปไปจุด
                 </MockBtn>
-                <MockBtn onClick={() => mockGps.set({ position: center, walkTarget: null })}>🏫 กลางโรงเรียน</MockBtn>
+                <MockBtn onClick={() => mockGps.set({ position: center, walkTarget: null })}>{area.icon} กลางพื้นที่</MockBtn>
                 <MockBtn onClick={() => mockGps.set({ position: offsetM(center, 0, 1500), walkTarget: null })}>
-                  🚌 นอกโรงเรียน
+                  🚌 นอกพื้นที่
                 </MockBtn>
                 <MockBtn
                   onClick={() => {
-                    const s = SPOTS[Math.floor(Math.random() * SPOTS.length)];
+                    const s = area.spots[Math.floor(Math.random() * area.spots.length)];
                     mockGps.set({ position: s.position, walkTarget: null });
                   }}
                 >

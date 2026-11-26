@@ -2,8 +2,9 @@
 
 import { useGeo } from "@/components/providers/GeoProvider";
 import { Alert } from "@/components/ui/Alert";
-import { GEOFENCE } from "@/config/game";
-import { centerOf, formatDistance, haversineM, pointInPolygon } from "@/lib/geo";
+import { distanceToArea, findAreaAt } from "@/lib/areas";
+import { formatDistance } from "@/lib/geo";
+import { useShell } from "./GameShell";
 
 /**
  * ข้อความสถานะ GPS / สิทธิ์ตำแหน่ง / อยู่นอกพื้นที่
@@ -14,6 +15,7 @@ import { centerOf, formatDistance, haversineM, pointInPolygon } from "@/lib/geo"
  */
 export function LocationStatus() {
   const { status, fix, accuracyLevel, stale, requestFresh } = useGeo();
+  const { area } = useShell();
 
   if (status === "denied") {
     return (
@@ -65,10 +67,10 @@ export function LocationStatus() {
       </Alert>
     );
   }
-  if (!pointInPolygon(fix, GEOFENCE.polygon)) {
+  if (!findAreaAt(fix)) {
     return (
-      <Alert tone="warning" title={`อยู่นอกโรงเรียน · ห่างประมาณ ${formatDistance(haversineM(fix, centerOf(GEOFENCE.polygon)))}`}>
-        เข้ามาในกรอบสีส้มบนแผนที่ก่อน จึงจะเริ่มภารกิจได้
+      <Alert tone="warning" title={`อยู่นอกพื้นที่เล่น · ห่าง${area.shortName}ประมาณ ${formatDistance(distanceToArea(fix, area))}`}>
+        เดินเข้าไปในกรอบสีส้ม หรือกดเลือกพื้นที่อื่นที่ใกล้กว่า
       </Alert>
     );
   }

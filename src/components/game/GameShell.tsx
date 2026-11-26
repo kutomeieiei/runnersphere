@@ -1,12 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { GameMap } from "@/components/map/GameMap";
 import { useGame } from "@/components/providers/GameProvider";
 import { useGeo } from "@/components/providers/GeoProvider";
+import type { PlayArea } from "@/config/game";
+import { DEFAULT_AREA, areaById, findAreaAt } from "@/lib/areas";
 import { mockGps } from "@/lib/mock-gps";
-import { HELP_SEEN_KEY } from "@/lib/storage-keys";
+import { AREA_KEY, HELP_SEEN_KEY } from "@/lib/storage-keys";
 import { BottomNav } from "./BottomNav";
 import { HelpModal } from "./HelpModal";
 import { OfflineBanner } from "./OfflineBanner";
@@ -21,9 +23,18 @@ type ShellContextValue = {
   closeHelp: () => void;
   /** เปิดวิธีเล่นอัตโนมัติครั้งแรกที่เข้าเกม */
   showHelpIfFirstTime: () => void;
+  /** พื้นที่เล่นที่กำลังแสดงบนแผนที่ */
+  area: PlayArea;
+  /** เปลี่ยนพื้นที่ (เลือกเองจากตัวเลือกพื้นที่) */
+  selectArea: (id: string) => void;
+  /** ล็อกพื้นที่ไว้เพราะมีภารกิจค้างอยู่ */
+  areaLocked: boolean;
 };
 const ShellContext = createContext<ShellContextValue>({
   recenter: () => undefined,
+  area: DEFAULT_AREA,
+  selectArea: () => undefined,
+  areaLocked: false,
   helpOpen: false,
   openHelp: () => undefined,
   closeHelp: () => undefined,
@@ -53,12 +64,44 @@ export function GameShell({ children }: { children: React.ReactNode }) {
     } catch {}
     if (!seen) setHelpOpen(true);
   }, []);
+  const mission = me?.activeMission ?? null;
+
+  // ---------- พื้นที่เล่นที่เลือก ----------
+  // จำตัวเลือกล่าสุดไว้ในเครื่อง · เดินเข้าพื้นที่ไหนจะเลือกพื้นที่นั้นให้อัตโนมัติ
+  // ระหว่างมีภารกิจ ล็อกไว้ที่พื้นที่ของภารกิจ
+  const [chosenId, setChosenId] = useState<string>(() => {
+    try {
+      return areaById(localStorage.getItem(AREA_KEY))?.id ?? DEFAULT_AREA.id;
+    } catch {
+      return DEFAULT_AREA.id;
+    }
+  });
+  const selectArea = useCallback((id: string) => {
+    if (!areaById(id)) return;
+    setChosenId(id);
+    try {
+      localStorage.setItem(AREA_KEY, id);
+    } catch {}
+  }, []);
+
+  const hereId = geo.fix ? (findAreaAt(geo.fix)?.id ?? null) : null;
+  const lastHereId = useRef<string | null>(null);
+  useEffect(() => {
+    if (hereId === lastHereId.current) return;
+    lastHereId.current = hereId;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (hereId) selectArea(hereId);
+  }, [hereId, selectArea]);
+
+  const missionArea = mission ? areaById(mission.areaId) : undefined;
+  const area = missionArea ?? areaById(chosenId) ?? DEFAULT_AREA;
+  const areaLocked = Boolean(mission);
+
   const shell = useMemo(
-    () => ({ recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime }),
-    [recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime],
+    () => ({ recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime, area, selectArea, areaLocked }),
+    [recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime, area, selectArea, areaLocked],
   );
 
-  const mission = me?.activeMission ?? null;
   const player = geo.fix ? { lat: geo.fix.lat, lng: geo.fix.lng, accuracy: geo.fix.accuracy } : null;
   const target = mission
     ? { ...mission.target, radiusM: mission.radiusM, name: mission.spotName }
@@ -72,6 +115,7 @@ export function GameShell({ children }: { children: React.ReactNode }) {
         aria-hidden={!onMap}
       >
         <GameMap
+          area={area}
           player={player}
           target={target}
           recenterSignal={recenterSignal}

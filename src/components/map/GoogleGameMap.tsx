@@ -10,43 +10,47 @@ import {
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps";
 import { useEffect, useRef } from "react";
-import { GAME_CONFIG, GEOFENCE } from "@/config/game";
-import { pointInPolygon } from "@/lib/geo";
+import { GAME_CONFIG } from "@/config/game";
 import {
-  MAP_BOUNDS,
-  MAP_CENTER,
   MAP_ID,
   MAP_OVERLAY_PADDING,
   MAPS_API_KEY,
+  mapBoundsFor,
+  mapCenterFor,
+  playerModeFor,
   type MapMarkers,
+  type PlayerMode,
 } from "./mapConfig";
 
 /**
  * แผนที่ Google (Maps JavaScript API เท่านั้น — ไม่ใช้ Places/Directions/Geocoding)
  * component นี้ถูก mount ครั้งเดียวใน layout ของเกม และไม่ถูก remount เมื่อสลับหน้า
  *
- * ปกติล็อกให้เลื่อนได้เฉพาะรอบโรงเรียน แต่ถ้าผู้เล่นอยู่นอกโรงเรียน จะปลดล็อกและซูมให้เห็น
- * ทั้งตัวผู้เล่นและโรงเรียน (ไม่งั้นจุดของผู้เล่นจะอยู่นอกกรอบจนมองไม่เห็น)
+ * แสดงและล็อกเฉพาะ "พื้นที่ที่เลือก" (ไม่เปิดแผนที่กว้าง)
+ * ถ้าผู้เล่นอยู่นอกพื้นที่แต่ไม่ไกล (≤ 2 กม.) จะปลดล็อกและซูมให้เห็นทั้งผู้เล่นและพื้นที่
+ * ถ้าไกลกว่านั้น แสดงเฉพาะพื้นที่ และกล่องเตือนด้านบนบอกระยะห่างแทน
  */
 export function GoogleGameMap({
+  area,
   player,
   target,
   onPick,
   recenterSignal,
   onLoadError,
 }: MapMarkers & { recenterSignal: number; onLoadError?: () => void }) {
-  const outside = Boolean(player && !pointInPolygon(player, GEOFENCE.polygon));
+  const mode = playerModeFor(area, player);
+  const unlocked = mode === "nearby";
   return (
     <APIProvider apiKey={MAPS_API_KEY} language="th" region="TH" onError={onLoadError}>
       <Map
         className="h-full w-full"
         mapId={MAP_ID}
-        defaultCenter={MAP_CENTER}
+        defaultCenter={mapCenterFor(area)}
         defaultZoom={GAME_CONFIG.map.defaultZoom}
         mapTypeId={GAME_CONFIG.map.mapType}
-        minZoom={outside ? GAME_CONFIG.map.outsideMinZoom : GAME_CONFIG.map.minZoom}
+        minZoom={unlocked ? GAME_CONFIG.map.outsideMinZoom : GAME_CONFIG.map.minZoom}
         maxZoom={GAME_CONFIG.map.maxZoom}
-        restriction={outside ? null : { latLngBounds: MAP_BOUNDS, strictBounds: false }}
+        restriction={unlocked ? null : { latLngBounds: mapBoundsFor(area), strictBounds: false }}
         gestureHandling="greedy"
         disableDefaultUI
         zoomControl
@@ -57,7 +61,7 @@ export function GoogleGameMap({
         }}
       >
         <Polygon
-          paths={GEOFENCE.polygon}
+          paths={area.polygon}
           strokeColor="#ff6b35"
           strokeOpacity={0.9}
           strokeWeight={3}
@@ -103,7 +107,7 @@ export function GoogleGameMap({
             </AdvancedMarker>
           </>
         )}
-        <CameraFollow player={player} target={target} recenterSignal={recenterSignal} outside={outside} />
+        <CameraFollow area={area} mode={mode} player={player} target={target} recenterSignal={recenterSignal} />
       </Map>
     </APIProvider>
   );
@@ -124,38 +128,47 @@ function PlayerDot() {
 
 /**
  * ควบคุมกล้อง:
- * - ได้ตำแหน่งครั้งแรก / เดินเข้าโรงเรียน → เลื่อนไปหาผู้เล่น
- * - อยู่นอกโรงเรียน → ซูมให้เห็นทั้งผู้เล่นและโรงเรียน
- * - กดปุ่ม 🎯 → กลับมาที่ผู้เล่น
+ * - เปลี่ยนพื้นที่ / ผู้เล่นเข้า-ออกพื้นที่ → จัดมุมกล้องใหม่ตามสถานการณ์
+ *   (อยู่ในพื้นที่ = ไปหาผู้เล่น · อยู่ใกล้ = เห็นทั้งคู่ · อยู่ไกล = เห็นเฉพาะพื้นที่)
+ * - กดปุ่ม 🎯 → กลับมาที่ผู้เล่น (ถ้าอยู่ไกลจะกลับมาที่พื้นที่แทน)
  * - ได้ภารกิจใหม่ → ซูมให้เห็นทั้งผู้เล่นและจุดหมาย
  */
 function CameraFollow({
+  area,
+  mode,
   player,
   target,
   recenterSignal,
-  outside,
-}: Pick<MapMarkers, "player" | "target"> & { recenterSignal: number; outside: boolean }) {
+}: Pick<MapMarkers, "area" | "player" | "target"> & { mode: PlayerMode; recenterSignal: number }) {
   const map = useMap();
-  const lastOutside = useRef<boolean | null>(null);
+  const lastKey = useRef<string | null>(null);
   const lastTargetName = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (!map || !player || lastOutside.current === outside) return;
-    lastOutside.current = outside;
-    if (outside) {
-      const b = new google.maps.LatLngBounds();
-      GEOFENCE.polygon.forEach((p) => b.extend(p));
-      b.extend(player);
-      map.fitBounds(b, MAP_OVERLAY_PADDING);
-    } else {
-      map.panTo(player);
-      if ((map.getZoom() ?? 0) < GAME_CONFIG.map.defaultZoom) map.setZoom(GAME_CONFIG.map.defaultZoom);
-    }
-  }, [map, player, outside]);
+  const fitArea = (withPlayer: boolean) => {
+    if (!map) return;
+    const b = new google.maps.LatLngBounds();
+    area.polygon.forEach((p) => b.extend(p));
+    if (withPlayer && player) b.extend(player);
+    map.fitBounds(b, MAP_OVERLAY_PADDING);
+  };
 
   useEffect(() => {
-    if (!map) return;
-    if (recenterSignal > 0 && player) map.panTo(player);
+    const key = `${area.id}:${mode}`;
+    if (!map || lastKey.current === key) return;
+    lastKey.current = key;
+    if (mode === "inside" && player) {
+      map.panTo(player);
+      if ((map.getZoom() ?? 0) < GAME_CONFIG.map.defaultZoom) map.setZoom(GAME_CONFIG.map.defaultZoom);
+    } else {
+      fitArea(mode === "nearby");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, area.id, mode, player]);
+
+  useEffect(() => {
+    if (!map || recenterSignal === 0) return;
+    if (player && mode !== "far") map.panTo(player);
+    else fitArea(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, recenterSignal]);
 

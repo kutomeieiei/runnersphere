@@ -1,5 +1,6 @@
 import { FieldValue, type DocumentReference, type Transaction } from "firebase-admin/firestore";
-import { GAME_CONFIG, GEOFENCE, SPOTS, type LatLng } from "@/config/game";
+import { GAME_CONFIG, type LatLng } from "@/config/game";
+import { findAreaAt } from "@/lib/areas";
 import {
   DEFAULT_SPECIES_ID,
   PET_CONFIG,
@@ -30,7 +31,6 @@ import {
   type MissionCheckState,
   type PositionReading,
 } from "@/lib/arrival";
-import { pointInPolygon } from "@/lib/geo";
 import { containsBlockedWord, rankEntries, type LeaderboardEntry } from "@/lib/leaderboard";
 import { calcCoins, minTravelMs, selectSpot } from "@/lib/missions";
 import { applyDecay, feedPet, newPet, petMood, rewardPetForMission, type PetState } from "@/lib/pet";
@@ -84,6 +84,8 @@ type PetDoc = PetState;
 type MissionStatus = "active" | "completed" | "cancelled" | "expired" | "flagged";
 
 type MissionDoc = MissionCheckState & {
+  /** พื้นที่เล่นของภารกิจนี้ (ภารกิจเก่าก่อนมีหลายพื้นที่จะไม่มีค่านี้) */
+  areaId?: string;
   spotId: string;
   spotName: string;
   spotHint: string | null;
@@ -133,6 +135,7 @@ function toPublicPet(id: string, pet: PetState): PublicPet {
 function toPublicMission(id: string, m: MissionDoc): PublicMission {
   return {
     id,
+    areaId: m.areaId ?? null,
     spotId: m.spotId,
     spotName: m.spotName,
     spotHint: m.spotHint,
@@ -348,12 +351,14 @@ export async function startMission(uid: string, reading: PositionReading): Promi
     if (reading.accuracy > cfg.start.maxAccuracyM) throw new ApiError(422, "poor_accuracy");
 
     const player: LatLng = { lat: reading.lat, lng: reading.lng };
-    if (!pointInPolygon(player, GEOFENCE.polygon)) throw new ApiError(403, "outside_geofence");
+    // ตัดสินพื้นที่จากตำแหน่งจริงเท่านั้น (ไม่เชื่อพื้นที่ที่ client เลือก)
+    const area = findAreaAt(player);
+    if (!area) throw new ApiError(403, "outside_geofence");
 
     const picked = selectSpot({
-      spots: SPOTS,
+      spots: area.spots,
       player,
-      geofence: GEOFENCE.polygon,
+      geofence: area.polygon,
       lastSpotId: user.lastSpotId,
     });
     if (!picked) throw new ApiError(409, "no_spot");
@@ -362,6 +367,7 @@ export async function startMission(uid: string, reading: PositionReading): Promi
     const radiusM = cfg.arrival.radiusM;
     const startSample: SpeedSample = { ...player, accuracy: reading.accuracy, timestamp: reading.timestamp, serverAt: now };
     const mission: MissionDoc = {
+      areaId: area.id,
       spotId: spot.id,
       spotName: spot.name,
       spotHint: spot.hint ?? null,

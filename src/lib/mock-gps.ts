@@ -1,7 +1,7 @@
 "use client";
 
-import { GEOFENCE, type LatLng } from "@/config/game";
-import { centerOf } from "./geo";
+import type { LatLng } from "@/config/game";
+import { DEFAULT_AREA, areaCenter } from "./areas";
 import { MOCK_GPS_KEY } from "./storage-keys";
 
 /**
@@ -29,7 +29,7 @@ export type MockState = {
 
 const DEFAULT_STATE: MockState = {
   enabled: false,
-  position: centerOf(GEOFENCE.polygon),
+  position: areaCenter(DEFAULT_AREA),
   accuracy: 8,
   mode: "ok",
   walkTarget: null,

@@ -1,5 +1,6 @@
 "use client";
 
+import { AreaPicker } from "@/components/game/AreaPicker";
 import { CoinBadge } from "@/components/game/CoinBadge";
 import { GpsChip } from "@/components/game/GpsChip";
 import { HelpButton } from "@/components/game/HelpModal";
@@ -32,6 +33,7 @@ export default function PlayPage() {
             <HelpButton />
           </div>
         </div>
+        <AreaPicker />
         <div className="pointer-events-auto">
           <LocationStatus />
         </div>

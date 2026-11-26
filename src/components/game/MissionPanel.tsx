@@ -5,14 +5,17 @@ import { useGame } from "@/components/providers/GameProvider";
 import { useGeo } from "@/components/providers/GeoProvider";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { GAME_CONFIG, GEOFENCE } from "@/config/game";
-import { bearingDeg, bearingToThai, formatDistance, haversineM, pointInPolygon } from "@/lib/geo";
+import { GAME_CONFIG } from "@/config/game";
+import { findAreaAt } from "@/lib/areas";
+import { useShell } from "./GameShell";
+import { bearingDeg, bearingToThai, formatDistance, haversineM } from "@/lib/geo";
 import { DirectionArrow } from "./DirectionArrow";
 
 export function MissionPanel() {
   const game = useGame();
   const geo = useGeo();
   const { me, starting, actionError, lastCheck, lastCheckAt } = game;
+  const { area, selectArea } = useShell();
   const mission = me?.activeMission ?? null;
   const fix = geo.fix;
   const [now, setNow] = useState(() => Date.now());
@@ -29,12 +32,16 @@ export function MissionPanel() {
   const capReached = today.spots >= GAME_CONFIG.health.dailySpotCap;
 
   if (!mission) {
-    const inside = fix ? pointInPolygon(fix, GEOFENCE.polygon) : false;
+    const here = fix ? findAreaAt(fix) : null;
+    const inside = Boolean(here);
+    // อยู่ในพื้นที่หนึ่ง แต่เลือกดูอีกพื้นที่ → ให้สลับกลับก่อน (ภารกิจเกิดในพื้นที่ที่ยืนอยู่จริงเสมอ)
+    const viewingOtherArea = Boolean(here && here.id !== area.id);
     // บอกเหตุผลเสมอเมื่อกดเริ่มไม่ได้ (Nielsen #1, #5, #9) แทนปุ่มสีจางที่ไม่รู้ว่าทำไม
     let blockedReason: string | null = null;
     if (geo.status === "denied") blockedReason = "ต้องอนุญาตให้ใช้ตำแหน่งก่อน (ดูวิธีด้านบน)";
     else if (!fix || geo.status !== "watching") blockedReason = "กำลังรอสัญญาณ GPS… ออกไปที่โล่งจะเร็วขึ้น";
-    else if (!inside) blockedReason = "ต้องอยู่ในเขตโรงเรียน (กรอบสีส้มบนแผนที่) ก่อนจึงจะเริ่มได้";
+    else if (!inside) blockedReason = `ต้องอยู่ใน${area.shortName} (กรอบสีส้ม) ก่อน หรือเลือกพื้นที่อื่นด้านบน`;
+    else if (viewingOtherArea && here) blockedReason = `ตอนนี้คุณอยู่ที่${here.shortName} ไม่ใช่${area.shortName}`;
     else if (geo.accuracyLevel === "approximate") blockedReason = "เปิด \"ตำแหน่งที่แม่นยำ\" ในเครื่องก่อน";
     const canStart = !blockedReason && !capReached;
     return (
@@ -68,6 +75,15 @@ export function MissionPanel() {
             {blockedReason && (
               <p id="start-blocked-reason" className="mt-2 text-center text-sm text-gray-600">
                 {blockedReason}
+                {viewingOtherArea && here && (
+                  <button
+                    type="button"
+                    onClick={() => selectArea(here.id)}
+                    className="ml-1 font-semibold text-brand-700 underline"
+                  >
+                    สลับไป{here.shortName}
+                  </button>
+                )}
               </p>
             )}
           </>
