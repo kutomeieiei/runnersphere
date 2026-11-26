@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizePrivateKey } from "../server/firebase-admin";
+import { normalizePrivateKey } from "../server/private-key";
 
 const PEM = "-----BEGIN PRIVATE KEY-----\nABC==\n-----END PRIVATE KEY-----\n";
 const ESCAPED = "-----BEGIN PRIVATE KEY-----\\nABC==\\n-----END PRIVATE KEY-----\\n";

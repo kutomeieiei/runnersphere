@@ -1,6 +1,7 @@
 import { GAME_CONFIG } from "@/config/game";
 import { messageFor } from "@/lib/errors";
 import { ApiError, classifyServerError, json } from "@/lib/server/http";
+import { normalizePrivateKey } from "@/lib/server/private-key";
 
 /**
  * ตรวจการตั้งค่าระบบ (สำหรับผู้ดูแล) — เปิด https://<โดเมน>/api/health ในเบราว์เซอร์
@@ -43,7 +44,7 @@ export async function GET() {
     !env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_PROJECT_ID === process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  const key = admin?.normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? "";
+  const key = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? "";
   const privateKeyLooksValid = !env.FIREBASE_PRIVATE_KEY || /-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(key);
 
   let firestore: { ok: boolean; ms?: number; problem?: string; hint?: string } = { ok: false };
