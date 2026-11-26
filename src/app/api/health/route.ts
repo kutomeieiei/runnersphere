@@ -1,5 +1,5 @@
 import { GAME_CONFIG } from "@/config/game";
-import { db } from "@/lib/server/firebase-admin";
+import { db, normalizePrivateKey } from "@/lib/server/firebase-admin";
 import { ApiError, classifyServerError, json } from "@/lib/server/http";
 import { messageFor } from "@/lib/errors";
 
@@ -34,7 +34,7 @@ export async function GET() {
     !env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_PROJECT_ID === process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  const key = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n") ?? "";
+  const key = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? "";
   const privateKeyLooksValid = !env.FIREBASE_PRIVATE_KEY || /-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(key);
 
   let firestore: { ok: boolean; ms?: number; problem?: string; hint?: string } = { ok: false };
