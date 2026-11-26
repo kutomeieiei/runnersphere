@@ -1,13 +1,22 @@
 import { GAME_CONFIG } from "@/config/game";
-import { db, normalizePrivateKey } from "@/lib/server/firebase-admin";
-import { ApiError, classifyServerError, json } from "@/lib/server/http";
 import { messageFor } from "@/lib/errors";
+import { ApiError, classifyServerError, json } from "@/lib/server/http";
 
 /**
  * ตรวจการตั้งค่าระบบ (สำหรับผู้ดูแล) — เปิด https://<โดเมน>/api/health ในเบราว์เซอร์
  * บอกแค่ว่าตั้งค่าครบหรือไม่ และฐานข้อมูลตอบหรือไม่ ไม่ส่งค่าของรหัสลับใดๆ กลับไป
  */
 export async function GET() {
+  // โหลดโมดูลฝั่ง server แบบ dynamic เพื่อให้รายงานได้ แม้ไลบรารี Firebase Admin จะโหลดไม่ขึ้น
+  let admin: typeof import("@/lib/server/firebase-admin") | null = null;
+  let loadError: string | null = null;
+  try {
+    admin = await import("@/lib/server/firebase-admin");
+  } catch (err) {
+    loadError = String((err as Error)?.message ?? err).split("\n")[0].slice(0, 300);
+    console.error("[health] failed to load firebase-admin", err);
+  }
+
   const has = (name: string) => Boolean(process.env[name]?.trim());
   const env = {
     NEXT_PUBLIC_FIREBASE_API_KEY: has("NEXT_PUBLIC_FIREBASE_API_KEY"),
@@ -34,13 +43,14 @@ export async function GET() {
     !env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_PROJECT_ID === process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  const key = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? "";
+  const key = admin?.normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY) ?? "";
   const privateKeyLooksValid = !env.FIREBASE_PRIVATE_KEY || /-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(key);
 
   let firestore: { ok: boolean; ms?: number; problem?: string; hint?: string } = { ok: false };
   const started = Date.now();
   try {
-    await db().collection("_health").doc("ping").get();
+    if (!admin) throw new Error(loadError ?? "firebase-admin not loaded");
+    await admin.db().collection("_health").doc("ping").get();
     firestore = { ok: true, ms: Date.now() - started };
   } catch (err) {
     const code = err instanceof ApiError ? err.code : classifyServerError(err);
@@ -48,12 +58,14 @@ export async function GET() {
     console.error("[health] firestore check failed", err);
   }
 
-  const ok = missing.length === 0 && projectsMatch && privateKeyLooksValid && firestore.ok;
+  const ok = !loadError && missing.length === 0 && projectsMatch && privateKeyLooksValid && firestore.ok;
   return json(
     {
       ok,
       app: "Movemai",
       serverRegion: process.env.VERCEL_REGION ?? "local",
+      nodeVersion: process.version,
+      adminLoadError: loadError,
       usingEmulator,
       missingEnv: missing,
       projectIdsMatch: projectsMatch,
