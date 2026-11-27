@@ -6,8 +6,10 @@ import { GpsChip } from "@/components/game/GpsChip";
 import { HelpButton } from "@/components/game/HelpModal";
 import { useShell } from "@/components/game/GameShell";
 import { LocationStatus } from "@/components/game/LocationStatus";
+import { MapEditorPanel } from "@/components/game/MapEditorPanel";
 import { MissionPanel } from "@/components/game/MissionPanel";
 import { MockGpsPanel } from "@/components/game/MockGpsPanel";
+import { useAreas } from "@/components/providers/AreasProvider";
 import { useGame } from "@/components/providers/GameProvider";
 import { useGeo } from "@/components/providers/GeoProvider";
 import { Alert } from "@/components/ui/Alert";
@@ -16,7 +18,10 @@ import { Alert } from "@/components/ui/Alert";
 export default function PlayPage() {
   const { me, loading, error, refresh } = useGame();
   const geo = useGeo();
-  const { recenter } = useShell();
+  const { recenter, editMode, setEditMode } = useShell();
+  const { editor } = useAreas();
+  const editing = editMode !== "off";
+  const canOpenEditor = editor.enabled && editor.canEdit && !me?.activeMission && !editing;
 
   return (
     <div className="flex min-h-dvh flex-col justify-between">
@@ -53,7 +58,18 @@ export default function PlayPage() {
       </header>
 
       <div className="space-y-2 px-3 pb-24">
-        <div className="flex justify-end">
+        <div className="flex items-end justify-between gap-2">
+          {canOpenEditor ? (
+            <button
+              type="button"
+              onClick={() => setEditMode("spot")}
+              className="pointer-events-auto rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800 shadow ring-1 ring-orange-200"
+            >
+              ✏️ แก้แผนที่ (ทดสอบ)
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             onClick={recenter}
             disabled={!geo.fix}
@@ -63,7 +79,7 @@ export default function PlayPage() {
             🎯
           </button>
         </div>
-        <MissionPanel />
+        {editing ? <MapEditorPanel /> : <MissionPanel />}
       </div>
     </div>
   );

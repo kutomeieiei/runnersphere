@@ -15,7 +15,7 @@ const M_PER_DEG = 111_320;
  * และจัดเนื้อหาให้อยู่ในช่องที่ไม่ถูกแถบด้านบน/การ์ดด้านล่างบัง
  * แสดงเฉพาะพื้นที่ที่เลือก · ผู้เล่นอยู่นอกพื้นที่แต่ใกล้ (≤ 2 กม.) จะซูมให้เห็นทั้งคู่
  */
-export function FallbackMap({ area, player, target, onPick, notice }: MapMarkers & { notice: string }) {
+export function FallbackMap({ area, player, target, onPick, notice, editing }: MapMarkers & { notice: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 390, h: 844 });
 
@@ -37,6 +37,7 @@ export function FallbackMap({ area, player, target, onPick, notice }: MapMarkers
   const pLng = player ? Math.round(player.lng * 2000) / 2000 : 0;
 
   const view = useMemo(() => {
+    // ระหว่างแก้แผนที่ มุมกล้องอยู่นิ่ง (ไม่ขยายตามจุดที่วาด) เพื่อให้แตะมุมถัดไปได้ตรงตำแหน่ง
     const b = mode === "nearby" ? boundsOf([...area.polygon, { lat: pLat, lng: pLng }], 80) : mapBoundsFor(area);
     const lat0 = b.north;
     const lng0 = b.west;
@@ -104,19 +105,51 @@ export function FallbackMap({ area, player, target, onPick, notice }: MapMarkers
         </defs>
         <rect width={size.w} height={size.h} fill="url(#grid)" />
         <polygon points={poly.join(" ")} fill="#ff6b3514" stroke="#ff6b35" strokeWidth="2.5" strokeLinejoin="round" />
-        {!outside &&
+        {(!outside || editing) &&
           area.spots.map((s) => {
             const { x, y } = view.toPx(s.position);
+            const custom = "custom" in s;
             return (
               <g key={s.id}>
-                <circle cx={x} cy={y} r={3.5} fill="#9ca3af" />
-                <text x={x + 6} y={y + 4} fontSize="11" fill="#4b5563">
+                <circle cx={x} cy={y} r={custom ? 4.5 : 3.5} fill={custom ? "#ea580c" : "#9ca3af"} />
+                <text x={x + 6} y={y + 4} fontSize="11" fill={custom ? "#c2410c" : "#4b5563"}>
                   {s.name}
                 </text>
               </g>
             );
           })}
         {outside && <AreaLabelAndLine area={area} view={view} player={pp} />}
+        {editing && editing.draft.length > 0 && (
+          <g>
+            <polyline
+              points={(editing.draft.length >= 3 ? [...editing.draft, editing.draft[0]] : editing.draft)
+                .map((p) => {
+                  const q = view.toPx(p);
+                  return `${q.x},${q.y}`;
+                })
+                .join(" ")}
+              fill="none"
+              stroke="#2563eb"
+              strokeWidth="2.5"
+            />
+            {editing.draft.map((p, i) => {
+              const q = view.toPx(p);
+              return (
+                <g key={i}>
+                  <circle cx={q.x} cy={q.y} r={8} fill="#2563eb" />
+                  <text x={q.x} y={q.y + 3.5} fontSize="10" fontWeight="700" fill="#fff" textAnchor="middle">
+                    {i + 1}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
+        {editing?.pendingSpot && (
+          <text x={view.toPx(editing.pendingSpot).x} y={view.toPx(editing.pendingSpot).y} fontSize="26" textAnchor="middle">
+            📍
+          </text>
+        )}
         {tp && target && (
           <g>
             <circle

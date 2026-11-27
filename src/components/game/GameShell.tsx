@@ -3,9 +3,10 @@
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { GameMap } from "@/components/map/GameMap";
+import { useAreas } from "@/components/providers/AreasProvider";
 import { useGame } from "@/components/providers/GameProvider";
 import { useGeo } from "@/components/providers/GeoProvider";
-import type { PlayArea } from "@/config/game";
+import type { LatLng, PlayArea } from "@/config/game";
 import { DEFAULT_AREA, areaById, findAreaAt } from "@/lib/areas";
 import { mockGps } from "@/lib/mock-gps";
 import { AREA_KEY, HELP_SEEN_KEY } from "@/lib/storage-keys";
@@ -29,12 +30,27 @@ type ShellContextValue = {
   selectArea: (id: string) => void;
   /** ล็อกพื้นที่ไว้เพราะมีภารกิจค้างอยู่ */
   areaLocked: boolean;
+  /** เครื่องมือแก้แผนที่ (ชั่วคราวช่วงทดสอบ) */
+  editMode: EditMode;
+  setEditMode: (m: EditMode) => void;
+  draft: LatLng[];
+  setDraft: React.Dispatch<React.SetStateAction<LatLng[]>>;
+  pendingSpot: LatLng | null;
+  setPendingSpot: (p: LatLng | null) => void;
 };
+
+export type EditMode = "off" | "spot" | "polygon";
 const ShellContext = createContext<ShellContextValue>({
   recenter: () => undefined,
   area: DEFAULT_AREA,
   selectArea: () => undefined,
   areaLocked: false,
+  editMode: "off",
+  setEditMode: () => undefined,
+  draft: [],
+  setDraft: () => undefined,
+  pendingSpot: null,
+  setPendingSpot: () => undefined,
   helpOpen: false,
   openHelp: () => undefined,
   closeHelp: () => undefined,
@@ -65,6 +81,7 @@ export function GameShell({ children }: { children: React.ReactNode }) {
     if (!seen) setHelpOpen(true);
   }, []);
   const mission = me?.activeMission ?? null;
+  const { areas } = useAreas();
 
   // ---------- พื้นที่เล่นที่เลือก ----------
   // จำตัวเลือกล่าสุดไว้ในเครื่อง · เดินเข้าพื้นที่ไหนจะเลือกพื้นที่นั้นให้อัตโนมัติ
@@ -77,14 +94,14 @@ export function GameShell({ children }: { children: React.ReactNode }) {
     }
   });
   const selectArea = useCallback((id: string) => {
-    if (!areaById(id)) return;
+    if (!areaById(id, areas)) return;
     setChosenId(id);
     try {
       localStorage.setItem(AREA_KEY, id);
     } catch {}
-  }, []);
+  }, [areas]);
 
-  const hereId = geo.fix ? (findAreaAt(geo.fix)?.id ?? null) : null;
+  const hereId = geo.fix ? (findAreaAt(geo.fix, areas)?.id ?? null) : null;
   const lastHereId = useRef<string | null>(null);
   useEffect(() => {
     if (hereId === lastHereId.current) return;
@@ -93,14 +110,46 @@ export function GameShell({ children }: { children: React.ReactNode }) {
     if (hereId) selectArea(hereId);
   }, [hereId, selectArea]);
 
-  const missionArea = mission ? areaById(mission.areaId) : undefined;
-  const area = missionArea ?? areaById(chosenId) ?? DEFAULT_AREA;
+  const missionArea = mission ? areaById(mission.areaId, areas) : undefined;
+  const area = missionArea ?? areaById(chosenId, areas) ?? areas[0] ?? DEFAULT_AREA;
   const areaLocked = Boolean(mission);
 
+  // ---------- เครื่องมือแก้แผนที่ ----------
+  const [editMode, setEditModeState] = useState<EditMode>("off");
+  const [draft, setDraft] = useState<LatLng[]>([]);
+  const [pendingSpot, setPendingSpot] = useState<LatLng | null>(null);
+  const setEditMode = useCallback((m: EditMode) => {
+    setEditModeState(m);
+    setPendingSpot(null);
+    if (m !== "polygon") setDraft([]);
+  }, []);
+
   const shell = useMemo(
-    () => ({ recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime, area, selectArea, areaLocked }),
-    [recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime, area, selectArea, areaLocked],
+    () => ({
+      recenter,
+      helpOpen,
+      openHelp,
+      closeHelp,
+      showHelpIfFirstTime,
+      area,
+      selectArea,
+      areaLocked,
+      editMode,
+      setEditMode,
+      draft,
+      setDraft,
+      pendingSpot,
+      setPendingSpot,
+    }),
+    [recenter, helpOpen, openHelp, closeHelp, showHelpIfFirstTime, area, selectArea, areaLocked, editMode, setEditMode, draft, pendingSpot],
   );
+
+  const onMapPick = (p: LatLng) => {
+    if (editMode === "polygon") setDraft((d) => [...d, p]);
+    else if (editMode === "spot") setPendingSpot(p);
+    else if (geo.mock.enabled) mockGps.set({ position: p, walkTarget: null });
+  };
+  const pickEnabled = editMode !== "off" || geo.mock.enabled;
 
   const player = geo.fix ? { lat: geo.fix.lat, lng: geo.fix.lng, accuracy: geo.fix.accuracy } : null;
   const target = mission
@@ -119,7 +168,8 @@ export function GameShell({ children }: { children: React.ReactNode }) {
           player={player}
           target={target}
           recenterSignal={recenterSignal}
-          onPick={geo.mock.enabled ? (p) => mockGps.set({ position: p, walkTarget: null }) : undefined}
+          onPick={pickEnabled ? onMapPick : undefined}
+          editing={editMode !== "off" ? { draft, pendingSpot } : null}
         />
       </div>
 

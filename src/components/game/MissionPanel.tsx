@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { GAME_CONFIG } from "@/config/game";
 import { findAreaAt } from "@/lib/areas";
+import { useAreas } from "@/components/providers/AreasProvider";
 import { useShell } from "./GameShell";
 import { bearingDeg, bearingToThai, formatDistance, haversineM } from "@/lib/geo";
 import { DirectionArrow } from "./DirectionArrow";
@@ -16,6 +17,7 @@ export function MissionPanel() {
   const geo = useGeo();
   const { me, starting, actionError, lastCheck, lastCheckAt } = game;
   const { area, selectArea } = useShell();
+  const { areas } = useAreas();
   const mission = me?.activeMission ?? null;
   const fix = geo.fix;
   const [now, setNow] = useState(() => Date.now());
@@ -32,7 +34,7 @@ export function MissionPanel() {
   const capReached = today.spots >= GAME_CONFIG.health.dailySpotCap;
 
   if (!mission) {
-    const here = fix ? findAreaAt(fix) : null;
+    const here = fix ? findAreaAt(fix, areas) : null;
     const inside = Boolean(here);
     // อยู่ในพื้นที่หนึ่ง แต่เลือกดูอีกพื้นที่ → ให้สลับกลับก่อน (ภารกิจเกิดในพื้นที่ที่ยืนอยู่จริงเสมอ)
     const viewingOtherArea = Boolean(here && here.id !== area.id);

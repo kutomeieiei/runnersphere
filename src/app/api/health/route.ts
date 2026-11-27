@@ -74,6 +74,10 @@ export async function GET() {
       firestore,
       emailVerificationRequired: GAME_CONFIG.features.requireEmailVerification,
       googleMapsKeySet: env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+      mapEditor: {
+        enabled: GAME_CONFIG.features.mapEditor,
+        restrictedToEmails: (process.env.SPOT_EDITOR_EMAILS ?? "").split(",").filter((e) => e.trim()).length,
+      },
     },
     ok ? 200 : 503,
   );

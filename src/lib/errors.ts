@@ -10,6 +10,9 @@ export type ApiErrorCode =
   | "invalid_nickname"
   | "nickname_blocked"
   | "leaderboard_disabled"
+  | "map_editor_forbidden"
+  | "invalid_area"
+  | "spot_outside_area"
   | "outside_geofence"
   | "poor_accuracy"
   | "approximate_location"
@@ -45,6 +48,9 @@ export const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   invalid_nickname: `ชื่อเล่นต้องมี 1–${GAME_CONFIG.profile.nicknameMaxLength} ตัวอักษร`,
   nickname_blocked: "ชื่อเล่นนี้มีคำที่ไม่เหมาะสม ลองตั้งชื่ออื่นนะ",
   leaderboard_disabled: "กระดานอันดับปิดอยู่",
+  map_editor_forbidden: "บัญชีนี้ไม่มีสิทธิ์แก้แผนที่",
+  invalid_area: "ข้อมูลพื้นที่ไม่ถูกต้อง (กรอบต้องมี 3–30 มุม)",
+  spot_outside_area: "จุดนี้อยู่นอกกรอบพื้นที่ วาดกรอบให้ครอบจุดนี้ก่อน หรือปักในกรอบสีส้ม",
   outside_geofence:
     "ตอนนี้คุณอยู่นอกพื้นที่เล่น เดินเข้าไปในกรอบสีส้มของพื้นที่ที่เลือกก่อน จึงจะเริ่มภารกิจได้",
   poor_accuracy:

@@ -1,6 +1,7 @@
 import { FieldValue, type DocumentReference, type Transaction } from "firebase-admin/firestore";
 import { GAME_CONFIG, type LatLng } from "@/config/game";
 import { findAreaAt } from "@/lib/areas";
+import { loadEffectiveAreas } from "./areas-store";
 import {
   DEFAULT_SPECIES_ID,
   PET_CONFIG,
@@ -317,6 +318,8 @@ export async function getStats(uid: string): Promise<StatsResponse> {
 export async function startMission(uid: string, reading: PositionReading): Promise<StartMissionResponse> {
   const now = Date.now();
   const cfg = GAME_CONFIG;
+  // พื้นที่ที่ใช้จริง (config + กรอบ/จุดที่แก้จากเครื่องมือแก้แผนที่)
+  const areas = await loadEffectiveAreas();
 
   return db().runTransaction(async (tx) => {
     const user = await readUser(tx, uid);
@@ -352,7 +355,7 @@ export async function startMission(uid: string, reading: PositionReading): Promi
 
     const player: LatLng = { lat: reading.lat, lng: reading.lng };
     // ตัดสินพื้นที่จากตำแหน่งจริงเท่านั้น (ไม่เชื่อพื้นที่ที่ client เลือก)
-    const area = findAreaAt(player);
+    const area = findAreaAt(player, areas);
     if (!area) throw new ApiError(403, "outside_geofence");
 
     const picked = selectSpot({

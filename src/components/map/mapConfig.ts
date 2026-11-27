@@ -21,8 +21,10 @@ export type MapMarkers = {
   area: PlayArea;
   player: { lat: number; lng: number; accuracy: number } | null;
   target: { lat: number; lng: number; radiusM: number; name: string } | null;
-  /** คลิกแผนที่เพื่อย้ายตำแหน่ง mock GPS */
+  /** แตะแผนที่ (ใช้กับ mock GPS และเครื่องมือแก้แผนที่) */
   onPick?: (p: { lat: number; lng: number }) => void;
+  /** โหมดแก้แผนที่: ปลดล็อกแผนที่ แสดงทุกจุด และกรอบ/หมุดที่กำลังวาด */
+  editing?: { draft: { lat: number; lng: number }[]; pendingSpot: { lat: number; lng: number } | null } | null;
 };
 
 /**

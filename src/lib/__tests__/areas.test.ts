@@ -63,3 +63,52 @@ describe("play area config sanity", () => {
     }
   });
 });
+
+import { mergeAreas, validatePolygon, validateSpotInput, type CustomSpot } from "../areas";
+
+describe("map editor helpers", () => {
+  const base = ACTIVE_AREAS[0];
+  const square = [
+    { lat: 16.0, lng: 102.0 },
+    { lat: 16.0, lng: 102.01 },
+    { lat: 16.01, lng: 102.01 },
+    { lat: 16.01, lng: 102.0 },
+  ];
+
+  it("override replaces the polygon and custom spots are appended", () => {
+    const spot: CustomSpot = { id: "custom-1", name: "ใต้ต้นไม้", position: { lat: 16.005, lng: 102.005 }, difficulty: 1, areaId: base.id, custom: true };
+    const merged = mergeAreas(ACTIVE_AREAS, [{ areaId: base.id, polygon: square }], [spot]);
+    const m = merged.find((a) => a.id === base.id)!;
+    expect(m.polygon).toEqual(square);
+    expect(m.spots.at(-1)?.id).toBe("custom-1");
+    expect(m.spots.length).toBe(base.spots.length + 1);
+    // พื้นที่อื่นไม่เปลี่ยน
+    expect(merged.filter((a) => a.id !== base.id)).toEqual(ACTIVE_AREAS.filter((a) => a.id !== base.id));
+  });
+
+  it("ignores degenerate overrides", () => {
+    const merged = mergeAreas(ACTIVE_AREAS, [{ areaId: base.id, polygon: square.slice(0, 2) }], []);
+    expect(merged[0].polygon).toEqual(base.polygon);
+  });
+
+  it("validatePolygon checks size and coordinates", () => {
+    expect(validatePolygon(square)).toEqual(square);
+    expect(validatePolygon(square.slice(0, 2))).toBeNull();
+    expect(validatePolygon([...square, { lat: 200, lng: 0 }])).toBeNull();
+    expect(validatePolygon("nope")).toBeNull();
+    expect(validatePolygon(Array.from({ length: 31 }, () => square[0]))).toBeNull();
+  });
+
+  it("validateSpotInput trims and bounds input", () => {
+    expect(validateSpotInput({ name: "  ลานไม้  ", lat: 16, lng: 102, difficulty: 3 })).toEqual({
+      name: "ลานไม้",
+      position: { lat: 16, lng: 102 },
+      difficulty: 3,
+      hint: undefined,
+    });
+    expect(validateSpotInput({ name: "x", lat: 16, lng: 102, difficulty: 9 })?.difficulty).toBe(1);
+    expect(validateSpotInput({ name: "", lat: 16, lng: 102 })).toBeNull();
+    expect(validateSpotInput({ name: "ก".repeat(41), lat: 16, lng: 102 })).toBeNull();
+    expect(validateSpotInput({ name: "x", lat: "16", lng: 102 })).toBeNull();
+  });
+});

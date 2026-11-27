@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useGeo } from "@/components/providers/GeoProvider";
 import { Modal } from "@/components/ui/Modal";
-import { ACTIVE_AREAS, areasByDistance, findAreaAt } from "@/lib/areas";
+import { useAreas } from "@/components/providers/AreasProvider";
+import { areasByDistance, findAreaAt } from "@/lib/areas";
 import { formatDistance } from "@/lib/geo";
 import { useShell } from "./GameShell";
 
@@ -15,11 +16,12 @@ import { useShell } from "./GameShell";
 export function AreaPicker() {
   const { area, selectArea, areaLocked } = useShell();
   const { fix } = useGeo();
+  const { areas } = useAreas();
   const [open, setOpen] = useState(false);
-  if (ACTIVE_AREAS.length < 2) return null;
+  if (areas.length < 2) return null;
 
-  const here = fix ? findAreaAt(fix) : null;
-  const list = fix ? areasByDistance(fix) : ACTIVE_AREAS.map((a) => ({ area: a, distanceM: null as number | null }));
+  const here = fix ? findAreaAt(fix, areas) : null;
+  const list = fix ? areasByDistance(fix, areas) : areas.map((a) => ({ area: a, distanceM: null as number | null }));
 
   return (
     <>

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { GameShell } from "@/components/game/GameShell";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { AreasProvider } from "@/components/providers/AreasProvider";
 import { GameProvider } from "@/components/providers/GameProvider";
 import { GeoProvider } from "@/components/providers/GeoProvider";
 import { GAME_CONFIG } from "@/config/game";
@@ -48,7 +49,9 @@ export default function GameLayout({ children }: LayoutProps<"/">) {
   return (
     <GeoProvider active>
       <GameProvider>
-        <GameShell>{children}</GameShell>
+        <AreasProvider>
+          <GameShell>{children}</GameShell>
+        </AreasProvider>
       </GameProvider>
     </GeoProvider>
   );

@@ -119,6 +119,33 @@ await sleep(5200);
 r = await call(b.token, "/api/missions/start", "POST", reading({ lat: 16.4625, lng: 102.8155 })); // ระหว่างพื้นที่
 ok(r.status === 403 && r.body.error.code === "outside_geofence", "between areas → outside", r.body);
 
+// map editor (ชั่วคราวช่วงทดสอบ) — วาดกรอบใหม่ให้สวนเกษตร ปักจุด แล้วผู้เล่นได้ภารกิจที่จุดนั้น
+r = await call(a.token, "/api/areas");
+ok(r.status === 200 && r.body.areas.length >= 3 && r.body.editor.canEdit === true, "areas endpoint + editor allowed", r.body.editor);
+const sq = [{ lat: 16.44, lng: 102.80 }, { lat: 16.44, lng: 102.805 }, { lat: 16.444, lng: 102.805 }, { lat: 16.444, lng: 102.80 }];
+r = await call(a.token, "/api/areas/edit", "POST", { action: "setPolygon", areaId: "kku-agri-park", polygon: sq.slice(0, 2) });
+ok(r.status === 400 && r.body.error.code === "invalid_area", "polygon needs 3+ corners", r.body);
+r = await call(a.token, "/api/areas/edit", "POST", { action: "setPolygon", areaId: "kku-agri-park", polygon: sq });
+ok(r.status === 200, "save new agri boundary", r.body);
+r = await call(a.token, "/api/areas");
+ok(JSON.stringify(r.body.areas.find((x) => x.id === "kku-agri-park").polygon) === JSON.stringify(sq), "areas reflect new boundary", r.body.areas[1]);
+r = await call(a.token, "/api/areas/edit", "POST", { action: "addSpot", areaId: "kku-agri-park", name: "นอกกรอบ", lat: 16.45, lng: 102.80 });
+ok(r.status === 400 && r.body.error.code === "spot_outside_area", "spot outside boundary rejected", r.body);
+r = await call(a.token, "/api/areas/edit", "POST", { action: "addSpot", areaId: "kku-agri-park", name: "ใต้ต้นมะม่วง", lat: 16.4432, lng: 102.8040, difficulty: 2 });
+ok(r.status === 200 && r.body.id?.startsWith("custom-"), "custom spot added", r.body);
+const customId = r.body.id;
+await sleep(5200);
+r = await call(b.token, "/api/missions/start", "POST", reading({ lat: 16.4408, lng: 102.8008 }));
+ok(r.status === 200 && r.body.mission.areaId === "kku-agri-park" && r.body.mission.spotId === customId, "mission uses the pinned spot", r.body);
+await call(b.token, "/api/missions/cancel", "POST");
+r = await call(a.token, "/api/areas/edit", "POST", { action: "deleteSpot", id: customId });
+ok(r.status === 200, "custom spot deleted", r.body);
+r = await call(a.token, "/api/areas/edit", "POST", { action: "resetPolygon", areaId: "kku-agri-park" });
+r = await call(a.token, "/api/areas");
+const agriBack = r.body.areas.find((x) => x.id === "kku-agri-park");
+ok(agriBack.polygon[0].lat === 16.458 && !agriBack.spots.some((x) => x.id === customId), "reset restores config boundary", agriBack);
+ok(await fetch(`${FS}/customSpots/x`, { headers: { authorization: `Bearer ${a.token}` } }).then((x) => x.status) === 403, "rules: customSpots not readable directly");
+
 // leaderboard
 r = await call(a.token, "/api/leaderboard");
 ok(r.status === 200 && r.body.top.length === 1 && r.body.top[0].nickname === "ต้นกล้า" && r.body.top[0].spots === 1 && r.body.top[0].isMe, "leaderboard shows A with 1 spot", r.body);

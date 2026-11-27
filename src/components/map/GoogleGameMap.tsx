@@ -6,6 +6,7 @@ import {
   Circle,
   Map,
   Polygon,
+  Polyline,
   useMap,
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps";
@@ -32,6 +33,7 @@ import {
  */
 export function GoogleGameMap({
   area,
+  editing,
   player,
   target,
   onPick,
@@ -39,7 +41,8 @@ export function GoogleGameMap({
   onLoadError,
 }: MapMarkers & { recenterSignal: number; onLoadError?: () => void }) {
   const mode = playerModeFor(area, player);
-  const unlocked = mode === "nearby";
+  // โหมดแก้แผนที่: ปลดล็อกเต็มที่ เพื่อเลื่อนไปหาตำแหน่งจริงได้
+  const unlocked = mode === "nearby" || Boolean(editing);
   return (
     <APIProvider apiKey={MAPS_API_KEY} language="th" region="TH" onError={onLoadError}>
       <Map
@@ -48,7 +51,7 @@ export function GoogleGameMap({
         defaultCenter={mapCenterFor(area)}
         defaultZoom={GAME_CONFIG.map.defaultZoom}
         mapTypeId={GAME_CONFIG.map.mapType}
-        minZoom={unlocked ? GAME_CONFIG.map.outsideMinZoom : GAME_CONFIG.map.minZoom}
+        minZoom={editing ? 5 : unlocked ? GAME_CONFIG.map.outsideMinZoom : GAME_CONFIG.map.minZoom}
         maxZoom={GAME_CONFIG.map.maxZoom}
         restriction={unlocked ? null : { latLngBounds: mapBoundsFor(area), strictBounds: false }}
         gestureHandling="greedy"
@@ -107,6 +110,7 @@ export function GoogleGameMap({
             </AdvancedMarker>
           </>
         )}
+        {editing && <EditorLayer area={area} editing={editing} />}
         <CameraFollow area={area} mode={mode} player={player} target={target} recenterSignal={recenterSignal} />
       </Map>
     </APIProvider>
@@ -183,4 +187,57 @@ function CameraFollow({
   }, [map, target, player]);
 
   return null;
+}
+
+/** เครื่องมือแก้แผนที่: แสดงจุดภารกิจทุกจุด + กรอบที่กำลังวาด + หมุดที่กำลังจะปัก */
+function EditorLayer({
+  area,
+  editing,
+}: {
+  area: MapMarkers["area"];
+  editing: NonNullable<MapMarkers["editing"]>;
+}) {
+  const { draft, pendingSpot } = editing;
+  return (
+    <>
+      {area.spots.map((s) => {
+        const custom = "custom" in s;
+        return (
+          <AdvancedMarker key={s.id} position={s.position} title={s.name} clickable={false}>
+            <div className="flex flex-col items-center">
+              <span
+                className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-white shadow ${
+                  custom ? "bg-orange-600" : "bg-gray-600"
+                }`}
+              >
+                {s.name}
+              </span>
+              <span className={`mt-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${custom ? "bg-orange-600" : "bg-gray-600"}`} />
+            </div>
+          </AdvancedMarker>
+        );
+      })}
+      {draft.length > 0 && (
+        <Polyline
+          path={draft.length >= 3 ? [...draft, draft[0]] : draft}
+          strokeColor="#2563eb"
+          strokeWeight={3}
+          strokeOpacity={0.9}
+          clickable={false}
+        />
+      )}
+      {draft.map((p, i) => (
+        <AdvancedMarker key={`d${i}`} position={p} clickable={false}>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow">
+            {i + 1}
+          </span>
+        </AdvancedMarker>
+      ))}
+      {pendingSpot && (
+        <AdvancedMarker position={pendingSpot} zIndex={20} clickable={false}>
+          <span className="text-3xl drop-shadow">📍</span>
+        </AdvancedMarker>
+      )}
+    </>
+  );
 }

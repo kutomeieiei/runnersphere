@@ -2,7 +2,7 @@ import { GAME_CONFIG } from "@/config/game";
 import { adminAuth } from "./firebase-admin";
 import { ApiError } from "./http";
 
-export type AuthedUser = { uid: string; emailVerified: boolean };
+export type AuthedUser = { uid: string; email: string | null; emailVerified: boolean };
 
 /**
  * ยืนยันตัวตนจาก Firebase ID token ใน header `Authorization: Bearer <token>`
@@ -35,5 +35,26 @@ export async function requireUser(
   if (GAME_CONFIG.features.requireEmailVerification && !emailVerified && !opts.allowUnverified) {
     throw new ApiError(403, "email_not_verified");
   }
-  return { uid: decoded.uid, emailVerified };
+  return { uid: decoded.uid, email: decoded.email ?? null, emailVerified };
+}
+
+/** อีเมลที่อนุญาตให้ใช้เครื่องมือแก้แผนที่ (ว่าง = ทุกคนที่ล็อกอิน) */
+export function editorAllowlist(): string[] {
+  return (process.env.SPOT_EDITOR_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function canEditMap(user: AuthedUser): boolean {
+  if (!GAME_CONFIG.features.mapEditor) return false;
+  const allow = editorAllowlist();
+  return allow.length === 0 || (user.email != null && allow.includes(user.email.toLowerCase()));
+}
+
+/** ต้องล็อกอิน + เปิดเครื่องมือแก้แผนที่ + (ถ้าตั้ง allowlist) อีเมลอยู่ในรายการ */
+export async function requireMapEditor(req: Request): Promise<AuthedUser> {
+  const user = await requireUser(req);
+  if (!canEditMap(user)) throw new ApiError(403, "map_editor_forbidden");
+  return user;
 }

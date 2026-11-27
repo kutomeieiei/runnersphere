@@ -4,6 +4,7 @@ import { useGeo } from "@/components/providers/GeoProvider";
 import { Alert } from "@/components/ui/Alert";
 import { distanceToArea, findAreaAt } from "@/lib/areas";
 import { formatDistance } from "@/lib/geo";
+import { useAreas } from "@/components/providers/AreasProvider";
 import { useShell } from "./GameShell";
 
 /**
@@ -16,6 +17,7 @@ import { useShell } from "./GameShell";
 export function LocationStatus() {
   const { status, fix, accuracyLevel, stale, requestFresh } = useGeo();
   const { area } = useShell();
+  const { areas } = useAreas();
 
   if (status === "denied") {
     return (
@@ -67,7 +69,7 @@ export function LocationStatus() {
       </Alert>
     );
   }
-  if (!findAreaAt(fix)) {
+  if (!findAreaAt(fix, areas)) {
     return (
       <Alert tone="warning" title={`อยู่นอกพื้นที่เล่น · ห่าง${area.shortName}ประมาณ ${formatDistance(distanceToArea(fix, area))}`}>
         เดินเข้าไปในกรอบสีส้ม หรือกดเลือกพื้นที่อื่นที่ใกล้กว่า
